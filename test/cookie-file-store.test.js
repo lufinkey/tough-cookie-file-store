@@ -20,10 +20,65 @@ const lastAccessedDate = creationDate
 chai.use(chaiDatetime)
 should()
 
-describe('Test cookie-file-store', () => {
-  beforeEach(function () {
-    cookieStore = new FileCookieStore(cookiesFile)
+
+function testCallbackFunction(method, args) {
+  const callback = args.pop()
+  let detached = false
+  method.call(cookieStore, ...args, (...cbArgs) => {
+    if(cookieStore.synchronous) {
+      expect(!detached)
+    } else {
+      expect(detached)
+    }
+    callback(...cbArgs)
   })
+  detached = true
+}
+
+function testAsyncFunction(method, args) {
+  const innerCallback = args.pop()
+  let detached = false
+  const callback = (...cbArgs) => {
+    if(cookieStore.synchronous) {
+      expect(detached)
+    } else {
+      expect(detached)
+    }
+    innerCallback(...cbArgs)
+  }
+  (async () => {
+    let result
+    try {
+      const resultPromise = method.call(cookieStore, ...args)
+      expect(resultPromise).to.be.instanceof(Promise)
+      result = await resultPromise
+    } catch(error) {
+      callback(error, undefined)
+      return
+    }
+    callback(null, result)
+  })()
+  detached = true
+}
+
+function storeFunctionTests(name, doTests) {
+  describe(`#${name} (callback)`, function () {
+    doTests((...args) => {
+      const method = cookieStore[name]
+      testCallbackFunction(method, args)
+    })
+  })
+  describe(`#${name} (promise)`, function () {
+    doTests((...args) => {
+      const method = cookieStore[name]
+      testAsyncFunction(method, args)
+    })
+  })
+}
+
+
+
+function fileCookieStoreTests() {
 
   describe('load', function () {
     it('FileCookieStore should be instance of Store class', function (done) {
@@ -57,9 +112,9 @@ describe('Test cookie-file-store', () => {
     })
   })
 
-  describe('#findCookie', function () {
+  storeFunctionTests('findCookie', function (findCookie) {
     it('Should find a cookie with the given domain, path and key (example.com, /, foo)', function (done) {
-      cookieStore.findCookie('example.com', '/', 'foo', function (error, cookie) {
+      findCookie('example.com', '/', 'foo', function (error, cookie) {
         expect(error).to.eq(null)
         expect(cookie).to.be.instanceof(Cookie)
         expect(cookie.key).to.eq('foo')
@@ -70,38 +125,38 @@ describe('Test cookie-file-store', () => {
         expect(cookie.hostOnly).to.eq(false)
         expect(cookie.creation).to.equalDate(creationDate)
         expect(cookie.lastAccessed).to.equalDate(lastAccessedDate)
+        done()
       })
-      done()
     })
 
     it('Should not find a cookie with the given domain, path and key (foo.com, /, bar)', function (done) {
-      cookieStore.findCookie('foo.com', '/', 'bar', function (error, cookie) {
+      findCookie('foo.com', '/', 'bar', function (error, cookie) {
         expect(error).to.eq(null)
         expect(cookie).to.eq(undefined)
+        done()
       })
-      done()
     })
 
     it('Should not find a cookie with the given domain, path and key (example.com, /home, bar)', function (done) {
-      cookieStore.findCookie('example.com', '/home', 'bar', function (error, cookie) {
+      findCookie('example.com', '/home', 'bar', function (error, cookie) {
         expect(error).to.eq(null)
         expect(cookie).to.eq(undefined)
+        done()
       })
-      done()
     })
 
     it('Should not find a cookie with the given domain, path and key (exmaple.com, /, c)', function (done) {
-      cookieStore.findCookie('example.com', '/', 'c', function (error, cookie) {
+      findCookie('example.com', '/', 'c', function (error, cookie) {
         expect(error).to.eq(null)
         expect(cookie).to.eq(null)
+        done()
       })
-      done()
     })
   })
 
-  describe('#findCookies', function () {
+  storeFunctionTests('findCookies', function (findCookies) {
     it('Should find cookies matching the given domain and path (example.com, all paths)', function (done) {
-      cookieStore.findCookies('example.com', null, function (error, cookies) {
+      findCookies('example.com', null, function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(2)
@@ -114,12 +169,12 @@ describe('Test cookie-file-store', () => {
         expect(cookies[0].hostOnly).to.eq(false)
         expect(cookies[0].creation).to.equalDate(creationDate)
         expect(cookies[0].lastAccessed).to.equalDate(lastAccessedDate)
+        done()
       })
-      done()
     })
 
     it('Should find cookies matching the given domain and path (example.com, /login)', function (done) {
-      cookieStore.findCookies('example.com', '/login', function (error, cookies) {
+      findCookies('example.com', '/login', function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(2)
@@ -132,48 +187,48 @@ describe('Test cookie-file-store', () => {
         expect(cookies[1].hostOnly).to.eq(false)
         expect(cookies[1].creation).to.equalDate(creationDate)
         expect(cookies[1].lastAccessed).to.equalDate(lastAccessedDate)
+        done()
       })
-      done()
     })
 
     it('Should not find cookies matching the given domain and path (foo.com, all paths)', function (done) {
-      cookieStore.findCookies('foo.com', '/', function (error, cookies) {
+      findCookies('foo.com', '/', function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(0)
+        done()
       })
-      done()
     })
 
     it('Should not find cookies matching the given domain and path (no domain)', function (done) {
-      cookieStore.findCookies('', '/', function (error, cookies) {
+      findCookies('', '/', function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(0)
+        done()
       })
-      done()
     })
 
     it('Should not find cookies matching the given domain (.co domain)', function (done) {
-      cookieStore.findCookies('.co', '/', function (error, cookies) {
+      findCookies('.co', '/', function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(0)
+        done()
       })
-      done()
     })
 
     it('Should not find cookies matching the given domain and path (no domain)', function (done) {
-      cookieStore.findCookies('', '/', null, function (error, cookies) {
+      findCookies('', '/', null, function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(0)
+        done()
       })
-      done()
     })
   })
 
-  describe('#putCookie', function () {
+  storeFunctionTests('putCookie', function (putCookie) {
     afterAll(function () {
       fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
     })
@@ -183,7 +238,7 @@ describe('Test cookie-file-store', () => {
       cookie.expires = expiresDate
       cookie.creation = creationDate
       cookie.lastAccessed = lastAccessedDate
-      cookieStore.putCookie(cookie, function () {
+      putCookie(cookie, function () {
         cookieStore.findCookie('example.com', '/', 'baz', function (error, cookie) {
           expect(error).to.eq(null)
           expect(cookie).to.be.instanceof(Cookie)
@@ -195,9 +250,9 @@ describe('Test cookie-file-store', () => {
           expect(cookie.creation).to.equalDate(creationDate)
           expect(cookie.lastAccessed).to.equalDate(lastAccessedDate)
           cookieStore.removeCookie('example.com', '/', 'baz', function () {})
+          done()
         })
       })
-      done()
     })
 
     it('Should add a new "baz" cookie to the store', function (done) {
@@ -206,7 +261,7 @@ describe('Test cookie-file-store', () => {
       cookie.creation = creationDate
       cookie.lastAccessed = lastAccessedDate
       cookieStore = new FileCookieStore(cookiesFileEmpty)
-      cookieStore.putCookie(cookie, function () {
+      putCookie(cookie, function () {
         cookieStore.findCookie('example.com', '/', 'baz', function (error, cookie) {
           expect(error).to.eq(null)
           expect(cookie).to.be.instanceof(Cookie)
@@ -217,20 +272,22 @@ describe('Test cookie-file-store', () => {
           expect(cookie.path).to.eq('/')
           expect(cookie.creation).to.equalDate(creationDate)
           expect(cookie.lastAccessed).to.equalDate(lastAccessedDate)
+          done()
         })
       })
-      done()
     })
   })
 
-  describe('#updateCookie', function () {
-    afterAll(function () {
+  storeFunctionTests('updateCookie', function (updateCookie) {
+    afterAll(function (done) {
       const cookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       cookie.expires = expiresDate
       cookie.creation = creationDate
       cookie.hostOnly = false
       cookie.lastAccessed = lastAccessedDate
-      cookieStore.putCookie(cookie, function () {})
+      cookieStore.putCookie(cookie, function () {
+        done()
+      })
     })
 
     it('Should update the value of an existing "foo" cookie', function (done) {
@@ -241,9 +298,9 @@ describe('Test cookie-file-store', () => {
       oldCookie.lastAccessed = lastAccessedDate
       const newCookie = oldCookie
       newCookie.value = 'bar'
-      cookieStore.updateCookie(oldCookie, newCookie, function () {
+      updateCookie(oldCookie, newCookie, function (error) {
+        expect(error).to.eq(null)
         cookieStore.findCookie('example.com', '/', 'foo', function (error, cookie) {
-          expect(error).to.eq(null)
           expect(cookie).to.be.instanceof(Cookie)
           expect(cookie.key).to.eq('foo')
           expect(cookie.value).to.eq('bar')
@@ -252,43 +309,43 @@ describe('Test cookie-file-store', () => {
           expect(cookie.path).to.eq('/')
           expect(cookie.creation).to.equalDate(creationDate)
           expect(cookie.lastAccessed).to.equalDate(lastAccessedDate)
+          done()
         })
       })
-      done()
     })
   })
 
-  describe('#removeCookie', function () {
+  storeFunctionTests('removeCookie', function (removeCookie) {
     it('Should remove a cookie from the store', function (done) {
       const cookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       cookieStore = new FileCookieStore(cookiesFileEmpty)
       cookieStore.putCookie(cookie, function () {})
-      cookieStore.removeCookie('example.com', '/', 'foo', function () {
+      removeCookie('example.com', '/', 'foo', function () {
         cookieStore.findCookies('example.com', '/', function (error, cookies) {
           expect(error).to.eq(null)
           expect(cookies).to.be.an('array')
           expect(cookies).to.have.lengthOf(0)
+          done()
         })
       })
-      done()
     })
   })
 
-  describe('#removeCookies', function () {
+  storeFunctionTests('removeCookies', function (removeCookies) {
     it('Should remove matching cookies from the store (domain + path)', function (done) {
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
       cookieStore = new FileCookieStore(cookiesFileEmpty)
       cookieStore.putCookie(fooCookie, function () {})
       cookieStore.putCookie(barCookie, function () {})
-      cookieStore.removeCookies('example.com', '/', function () {
+      removeCookies('example.com', '/', function () {
         cookieStore.findCookies('example.com', '/', function (error, cookies) {
           expect(error).to.eq(null)
           expect(cookies).to.be.an('array')
           expect(cookies).to.have.lengthOf(0)
+          done()
         })
       })
-      done()
     })
 
     it('Should remove matching cookies from the store (domain)', function (done) {
@@ -297,47 +354,48 @@ describe('Test cookie-file-store', () => {
       cookieStore = new FileCookieStore(cookiesFileEmpty)
       cookieStore.putCookie(fooCookie, function () {})
       cookieStore.putCookie(barCookie, function () {})
-      cookieStore.removeCookies('example.com', null, function () {
+      removeCookies('example.com', null, function () {
         cookieStore.findCookies('example.com', null, function (error, cookies) {
           expect(error).to.eq(null)
           expect(cookies).to.be.an('array')
           expect(cookies).to.have.lengthOf(0)
+          done()
         })
       })
-      done()
     })
   })
 
-  describe('#removeAllCookies', function () {
+  storeFunctionTests('removeAllCookies', function (removeAllCookies) {
     it('Should remove all cookies from the store', function (done) {
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
       cookieStore = new FileCookieStore(cookiesFileEmpty)
       cookieStore.putCookie(fooCookie, function () {})
       cookieStore.putCookie(barCookie, function () {})
-      cookieStore.removeAllCookies(function () {
+      removeAllCookies(function () {
         cookieStore.findCookies('example.com', '/', function (error, cookies) {
           expect(error).to.eq(null)
           expect(cookies).to.be.an('array')
           expect(cookies).to.have.lengthOf(0)
+          done()
         })
       })
-      done()
     })
   })
 
-  describe('#getAllCookies', function () {
-    afterAll(function () {
+  storeFunctionTests('getAllCookies', function (getAllCookies) {
+    afterAll(function (done) {
       fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+      done()
     })
 
     it('Should return an "Array" of cookies', function (done) {
-      cookieStore.getAllCookies(function (error, cookies) {
+      getAllCookies(function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(2)
+        done()
       })
-      done()
     })
 
     it('Should return an "Array" of cookies', function (done) {
@@ -348,12 +406,47 @@ describe('Test cookie-file-store', () => {
       cookieStore = new FileCookieStore(cookiesFileEmpty)
       cookieStore.putCookie(fooCookie, function () {})
       cookieStore.putCookie(barCookie, function () {})
-      cookieStore.getAllCookies(function (error, cookies) {
+      getAllCookies(function (error, cookies) {
         expect(error).to.eq(null)
         expect(cookies).to.be.an('array')
         expect(cookies).to.have.lengthOf(2)
+        done()
       })
-      done()
     })
+  })
+}
+
+describe('Test cookie-file-store', function () {
+  describe('async = false', function() {
+    beforeEach(function () {
+      cookieStore = new FileCookieStore(cookiesFile)
+      expect(cookieStore.synchronous).to.eq(true)
+    })
+
+    fileCookieStoreTests()
+  })
+
+  describe('async = true, loadAsync = false', function() {
+    beforeEach(function () {
+      cookieStore = new FileCookieStore(cookiesFile, {
+        async: true,
+        loadAsync: false
+      })
+      expect(cookieStore.synchronous).to.eq(false)
+    })
+
+    fileCookieStoreTests()
+  })
+
+  describe('async = true, loadAsync = true', function() {
+    beforeEach(function () {
+      cookieStore = new FileCookieStore(cookiesFile, {
+        async: true,
+        loadAsync: true
+      })
+      expect(cookieStore.synchronous).to.eq(false)
+    })
+
+    fileCookieStoreTests()
   })
 })

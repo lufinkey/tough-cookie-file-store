@@ -65,7 +65,7 @@ export default class FileCookieStore extends Store {
         if (dataJson) {
           this.idx = dataJson
         }
-      }).catch(err => {
+      }, err => {
         delete this._readPromise
         if (options?.onLoadError) {
           options.onLoadError(err)
@@ -113,11 +113,17 @@ export default class FileCookieStore extends Store {
       }
     } else {
       // do action immediately
-      const result = action()
       if (cb) {
+        let result
+        try {
+          result = action()
+        } catch(error) {
+          cb(error, undefined)
+          return
+        }
         cb(null, result)
       } else {
-        return Promise.resolve(result)
+        return (async () => action())()
       }
     }
   }
@@ -174,7 +180,18 @@ export default class FileCookieStore extends Store {
       }
     } else {
       // do action immediately
-      if (action()) {
+      let changed
+      try {
+        changed = action()
+      } catch(error) {
+        if(cb) {
+          cb(error)
+          return
+        } else {
+          return Promise.reject(error)
+        }
+      }
+      if (changed) {
         return this._save(cb)
       } else {
         if (cb) {
@@ -216,11 +233,17 @@ export default class FileCookieStore extends Store {
    */
   findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | null | undefined>): (void | Promise<Cookie | null | undefined>) {
     if (this.synchronous) {
-      const cookie = this._findCookieSync(domain, path, key)
       if (cb) {
+        let cookie
+        try {
+          cookie = this._findCookieSync(domain, path, key)
+        } catch(error) {
+          cb(error, undefined)
+          return
+        }
         cb(null, cookie)
       } else {
-        return Promise.resolve(cookie)
+        return (async () => this._findCookieSync(domain, path, key))()
       }
     } else {
       return this._findCookieAsync(domain, path, key, cb)
@@ -294,11 +317,17 @@ export default class FileCookieStore extends Store {
       allowSpecialUseDomain = false
     }
     if (this.synchronous) {
-      const cookies = this._findCookiesSync(domain, path, allowSpecialUseDomain)
       if (cb) {
+        let cookies
+        try {
+          cookies = this._findCookiesSync(domain, path, allowSpecialUseDomain)
+        } catch(error) {
+          cb(error, undefined)
+          return
+        }
         cb(null, cookies)
       } else {
-        return Promise.resolve(cookies)
+        return (async () => this._findCookiesSync(domain, path, allowSpecialUseDomain))()
       }
     } else {
       return this._findCookiesAsync(domain, path, allowSpecialUseDomain, cb)
@@ -390,11 +419,16 @@ export default class FileCookieStore extends Store {
    */
   putCookie (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      this._putCookieSync(cookie)
       if (cb) {
+        try {
+          this._putCookieSync(cookie)
+        } catch(error) {
+          cb(error)
+          return
+        }
         cb(null)
       } else {
-        return Promise.resolve()
+        return (async () => this._putCookieSync(cookie))()
       }
     } else {
       return this._putCookieAsync(cookie, cb)
@@ -499,11 +533,16 @@ export default class FileCookieStore extends Store {
    */
   removeCookie (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      this._removeCookieSync(domain, path, key)
       if (cb) {
+        try {
+          this._removeCookieSync(domain, path, key)
+        } catch(error) {
+          cb(error)
+          return
+        }
         cb(null)
       } else {
-        return Promise.resolve()
+        return (async () => this._removeCookieSync(domain, path, key))()
       }
     } else {
       return this._removeCookieAsync(domain, path, key, cb)
@@ -577,11 +616,16 @@ export default class FileCookieStore extends Store {
    */
   removeCookies (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      this._removeCookiesSync(domain, path)
       if (cb) {
+        try {
+          this._removeCookiesSync(domain, path)
+        } catch(error) {
+          cb(error)
+          return
+        }
         cb(null)
       } else {
-        return Promise.resolve()
+        return (async () => this._removeCookiesSync(domain, path))()
       }
     } else {
       return this._removeCookiesAsync(domain, path, cb)
@@ -654,11 +698,16 @@ export default class FileCookieStore extends Store {
    */
   removeAllCookies (cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      this._removeAllCookiesSync()
       if (cb) {
+        try {
+          this._removeAllCookiesSync()
+        } catch(error) {
+          cb(error)
+          return
+        }
         cb(null)
       } else {
-        return Promise.resolve()
+        return (async () => this._removeAllCookiesSync())()
       }
     } else {
       return this._removeAllCookiesAsync(cb)
@@ -716,11 +765,17 @@ export default class FileCookieStore extends Store {
    */
   getAllCookies (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     if (this.synchronous) {
-      const cookies = this._getAllCookiesSync()
       if (cb) {
+        let cookies
+        try {
+          cookies = this._getAllCookiesSync()
+        } catch(error) {
+          cb(error, undefined)
+          return
+        }
         cb(null, cookies)
       } else {
-        return Promise.resolve(cookies)
+        return (async () => this._getAllCookiesSync())()
       }
     } else {
       return this._getAllCookiesAsync(cb)
@@ -746,7 +801,7 @@ export default class FileCookieStore extends Store {
         const pVal = domainVal[p]
         for (const key in pVal) {
           const cookie = pVal[key]
-          if (key !== null) {
+          if (key != null) {
             cookies.push(cookie)
           }
         }
@@ -867,12 +922,21 @@ export default class FileCookieStore extends Store {
         // delay one frame, in case of multiple writes
         if (!async) {
           await new Promise<void>((resolve) => {
-            setTimeout(() => {
-              // this is now the active write, so update the write promises
-              this._writePromise = this._nextWritePromise
-              this._nextWritePromise = undefined
-              resolve()
-            }, 0)
+            if (typeof setImmediate !== 'undefined') {
+              setImmediate(() => {
+                // this is now the active write, so update the write promises
+                this._writePromise = this._nextWritePromise
+                this._nextWritePromise = undefined
+                resolve()
+              })
+            } else {
+              setTimeout(() => {
+                // this is now the active write, so update the write promises
+                this._writePromise = this._nextWritePromise
+                this._nextWritePromise = undefined
+                resolve()
+              }, 0)
+            }
           })
         } else {
           // this is now the active write, so update the write promises
