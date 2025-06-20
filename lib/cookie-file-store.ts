@@ -801,19 +801,11 @@ export default class FileCookieStore extends Store {
         }
         // delay one frame, in case of multiple writes
         if (!async) {
-          await new Promise<void>((resolve) => {
-            setTimeout(() => {
-              // this is now the active write, so update the write promises
-              this._writePromise = this._nextWritePromise
-              this._nextWritePromise = undefined
-              resolve()
-            }, 0)
-          })
-        } else {
-          // this is now the active write, so update the write promises
-          this._writePromise = this._nextWritePromise
-          this._nextWritePromise = undefined
+          await Promise.resolve();
         }
+        // this is now the active write, so update the write promises
+        this._writePromise = this._nextWritePromise
+        this._nextWritePromise = undefined
         // save to the file
         try {
           await this._saveToFileAsync(this.filePath, this.idx)

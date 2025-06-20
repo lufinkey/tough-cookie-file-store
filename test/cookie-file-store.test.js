@@ -67,9 +67,10 @@ function testAsyncMethod (method, args) {
     callback(null, result)
   })()
   // we need to delay 1 tick, because javascript promises resolve on the next microtick
-  setTimeout(() => {
+  ;(async () => {
+    await Promise.resolve()
     detached = true
-  }, 0)
+  })()
 }
 
 /**
