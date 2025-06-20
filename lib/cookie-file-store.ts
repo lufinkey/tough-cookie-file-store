@@ -324,19 +324,19 @@ export default class FileCookieStore extends Store {
     let pathMatcher: (domainIndex: CookiesDomainData) => void
     if (!path) {
       pathMatcher = function matchAll (domainIndex: CookiesDomainData) {
-        for (const curPath in domainIndex) {
+        for (const curPath of Object.keys(domainIndex)) {
           const pathIndex = domainIndex[curPath]
-          for (const key in pathIndex) {
+          for (const key of Object.keys(pathIndex)) {
             results.push(pathIndex[key])
           }
         }
       }
     } else {
       pathMatcher = function matchRFC (domainIndex: CookiesDomainData) {
-        for (const cookiePath in domainIndex) {
+        for (const cookiePath of Object.keys(domainIndex)) {
           if (pathMatch(path, cookiePath)) {
             const pathIndex = domainIndex[cookiePath]
-            for (const key in pathIndex) {
+            for (const key of Object.keys(pathIndex)) {
               results.push(pathIndex[key])
             }
           }
@@ -675,11 +675,11 @@ export default class FileCookieStore extends Store {
    */
   private _getAllCookiesSync (): Cookie[] {
     const cookies: Cookie[] = []
-    for (const domain in this.idx) {
+    for (const domain of Object.keys(this.idx)) {
       const domainVal = this.idx[domain]
-      for (const p in domainVal) {
+      for (const p of Object.keys(domainVal)) {
         const pVal = domainVal[p]
-        for (const key in pVal) {
+        for (const key of Object.keys(pVal)) {
           const cookie = pVal[key]
           if (key != null) {
             cookies.push(cookie)
@@ -747,11 +747,11 @@ export default class FileCookieStore extends Store {
     }
 
     // create Cookie instances of all entries
-    for (const d in dataJson) {
+    for (const d of Object.keys(dataJson)) {
       const dVal = dataJson[d]
-      for (const p in dVal) {
+      for (const p of Object.keys(dVal)) {
         const pVal = dVal[p]
-        for (const k in pVal) {
+        for (const k of Object.keys(pVal)) {
           // since Cookie is a class, we need to create an instance of it
           pVal[k] = Cookie.fromJSON(JSON.stringify(pVal[k]))
         }
