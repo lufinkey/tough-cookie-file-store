@@ -87,8 +87,8 @@ export default class FileCookieStore extends Store {
    * Waits for the initial load to finish if unfinished, and then performs the given synchronous action.
    * Afterwards, the callback will be called with an error or a result. If no callback is passed, a promise
    * will be returned instead.
-   * @param {Function} action The synchronous read action to execute
-   * @param {Function} cb The callback to call with the error or result
+   * @param {Function} action - The synchronous read action to execute
+   * @param {Function} cb - The callback to call with the error or result
    * @returns {Promise} a promise if no callback was passed.
    */
   private _doSyncReadAsAsync<TResult> (action: () => TResult, cb: Callback<TResult> | undefined): (void | Promise<TResult>) {
@@ -139,8 +139,8 @@ export default class FileCookieStore extends Store {
    * Afterwards, if the store has changed, then changes to the store will be saved to its file, and then
    * the callback will be called with an error if any, or `null` if no error. If no callback is passed, a
    * promise will be returned instead.
-   * @param {Function} action
-   * @param {Function} cb
+   * @param {Function} action - The synchronous write action to execute. This should return a boolean indicating whether the store has changed.
+   * @param {Function} cb - The callback to call with the error or result
    * @returns {Promise} a promise if no callback was passed.
    */
   _doSyncWriteAsAsync (action: () => boolean, cb: ErrorCallback | undefined): (void | Promise<void>) {
