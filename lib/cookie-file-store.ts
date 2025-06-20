@@ -781,19 +781,16 @@ export default class FileCookieStore extends Store {
     if (!this._nextWritePromise) {
       // create next write promise
       this._nextWritePromise = (async () => {
-        let async = false
         // wait for active write to finish if any
         if (this._writePromise) {
-          async = true
           // wait for write to finish
           try {
             await this._writePromise
           } catch {
             // ignore error
           }
-        }
-        // delay one frame, in case of multiple writes
-        if (!async) {
+        } else {
+          // delay atleast 1 tick, in case of multiple writes
           await Promise.resolve();
         }
         // this is now the active write, so update the write promises
