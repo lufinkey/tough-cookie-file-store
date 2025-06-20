@@ -52,32 +52,21 @@ function testAsyncMethod (method, args) {
   const callback = args.pop()
   let detached = false
   ;(async () => {
-    let resultPromise
+    let result
     try {
-      resultPromise = method.call(cookieStore, ...args)
+      const resultPromise = method.call(cookieStore, ...args)
       expect(resultPromise).to.be.instanceof(Promise)
+      result = await resultPromise
+      if (cookieStore.synchronous) {
+        expect(detached).to.eq(false)
+      }
     } catch (error) {
       callback(error, undefined)
       return
     }
-    resultPromise.then((result) => {
-      try {
-        if (cookieStore.synchronous) {
-          expect(detached).to.eq(false)
-        }
-      } catch (error) {
-        // console.error(error)
-        callback(error, undefined)
-        return
-      }
-      callback(null, result)
-    }, (error) => {
-      callback(error, undefined)
-    }).catch((error) => {
-      console.error(error)
-    })
+    callback(null, result)
   })()
-  // we need to delay 1 tick, because javascript promises resolve `.then()` on the next microtick
+  // we need to delay 1 tick, because javascript promises resolve on the next microtick
   setTimeout(() => {
     detached = true
   }, 0)
