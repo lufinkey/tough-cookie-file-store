@@ -872,9 +872,5 @@ export default class FileCookieStore extends Store {
  * @returns {boolean} true if the object has a key, or false if the object has no keys.
  */
 function objectHasAnyKeys (obj: object) {
-  // eslint-disable-next-line no-unreachable-loop
-  for (const key in obj) {
-    return true
-  }
-  return false
+  return (Object.keys(obj).length > 0)
 }
