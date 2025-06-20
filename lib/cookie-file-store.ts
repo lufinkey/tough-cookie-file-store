@@ -84,7 +84,7 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   * Waits for the initial load to finish if unfinished, and then performs the given synchronous action.
+   * Waits for the initial load to finish if unfinished, and then performs the given synchronous read action.
    * Afterwards, the callback will be called with an error or a result. If no callback is passed, a promise
    * will be returned instead.
    * @param {Function} action - The synchronous read action to execute
@@ -135,7 +135,7 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   * Waits for the initial load to finish if unfinished, and then performs a synchronous write action.
+   * Waits for the initial load to finish if unfinished, and then performs the given synchronous write action.
    * Afterwards, if the store has changed, then changes to the store will be saved to its file, and then
    * the callback will be called with an error if any, or `null` if no error. If no callback is passed, a
    * promise will be returned instead.
