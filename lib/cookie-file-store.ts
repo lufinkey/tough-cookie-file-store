@@ -487,9 +487,9 @@ export default class FileCookieStore extends Store {
     }
     const deleted = (delete pathVal[key])
     // clean up entries if empty
-    if (deleted && !objectHasAnyKeys(pathVal)) {
+    if (deleted && Object.keys(pathVal).length == 0) {
       delete domainVal[path]
-      if (!objectHasAnyKeys(domainVal)) {
+      if (Object.keys(domainVal).length == 0) {
         delete this.idx[domain]
       }
     }
@@ -558,7 +558,7 @@ export default class FileCookieStore extends Store {
       if (domainVal) {
         const deleted = (delete domainVal[path])
         // clean up entries if empty
-        if (deleted && !objectHasAnyKeys(domainVal)) {
+        if (deleted && Object.keys(domainVal).length == 0) {
           delete this.idx[domain]
         }
         return deleted
@@ -620,7 +620,7 @@ export default class FileCookieStore extends Store {
    * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
   private _removeAllCookiesSyncInternal (): boolean {
-    if (!objectHasAnyKeys(this.idx)) {
+    if (Object.keys(this.idx).length == 0) {
       return false
     }
     this.idx = {}
@@ -863,13 +863,4 @@ export default class FileCookieStore extends Store {
     const dataString = JSON.stringify(data)
     fs.writeFileSync(filePath, dataString)
   }
-}
-
-/**
- * Tells if the given object has any keys
- * @param {object} obj - The object to check for any keys
- * @returns {boolean} true if the object has a key, or false if the object has no keys.
- */
-function objectHasAnyKeys (obj: object) {
-  return (Object.keys(obj).length > 0)
 }
