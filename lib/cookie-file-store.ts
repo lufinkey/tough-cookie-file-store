@@ -30,11 +30,11 @@ export default class FileCookieStore extends Store {
   /**
    * Creates a new JSON file store in the specified file.
    *
-   * @param filePath - The file in which the store will be created.
-   * @param options - Options for initializing the store.
-   * @param options.async - Whether to write the file asynchronously
-   * @param options.loadAsync - Whether to read the file asynchronously
-   * @param options.onLoadError - Optional callback for async file-load errors
+   * @param {string} filePath - The file in which the store will be created.
+   * @param {object} options - Options for initializing the store.
+   * @param {boolean} options.async - Whether to write the file asynchronously.
+   * @param {boolean} options.loadAsync - Whether to read the file asynchronously.
+   * @param {Function} options.onLoadError - Optional callback for any async file-load error. Unused if `loadAsync` is false.
    */
   constructor (
     filePath: string,
@@ -72,6 +72,8 @@ export default class FileCookieStore extends Store {
         } else {
           console.error(err)
         }
+      }).catch((error) => {
+        console.error(error)
       })
     } else {
       const dataJson = this._loadFromFileSync(this.filePath)
@@ -82,11 +84,14 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param action
-   * @param cb
+   * Waits for the initial load to finish if unfinished, and then performs the given synchronous action.
+   * Afterwards, the callback will be called with an error or a result. If no callback is passed, a promise
+   * will be returned instead.
+   * @param {Function} action The synchronous read action to execute
+   * @param {Function} cb The callback to call with the error or result
+   * @returns {Promise} a promise if no callback was passed.
    */
-  private _doSyncReadAsAsync<TResult> (action: () => TResult, cb: Callback<TResult> | undefined) {
+  private _doSyncReadAsAsync<TResult> (action: () => TResult, cb: Callback<TResult> | undefined): (void | Promise<TResult>) {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
@@ -117,7 +122,7 @@ export default class FileCookieStore extends Store {
         let result
         try {
           result = action()
-        } catch(error) {
+        } catch (error) {
           cb(error, undefined)
           return
         }
@@ -129,9 +134,13 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param action
-   * @param cb
+   * Waits for the initial load to finish if unfinished, and then performs a synchronous write action.
+   * Afterwards, if the store has changed, then changes to the store will be saved to its file, and then
+   * the callback will be called with an error if any, or `null` if no error. If no callback is passed, a
+   * promise will be returned instead.
+   * @param {Function} action
+   * @param {Function} cb
+   * @returns {Promise} a promise if no callback was passed.
    */
   _doSyncWriteAsAsync (action: () => boolean, cb: ErrorCallback | undefined): (void | Promise<void>) {
     if (this._readPromise) {
@@ -183,8 +192,8 @@ export default class FileCookieStore extends Store {
       let changed
       try {
         changed = action()
-      } catch(error) {
-        if(cb) {
+      } catch (error) {
+        if (cb) {
           cb(error)
           return
         } else {
@@ -203,41 +212,18 @@ export default class FileCookieStore extends Store {
     }
   }
 
-  /**
-   * The findCookie callback.
-   *
-   * @callback FileCookieStore~findCookieCallback
-   * @param {Error} error - The error if any.
-   * @param {Cookie} cookie - The cookie found.
-   */
-
-  /**
-   * Retrieve a cookie with the given domain, path and key.
-   *
-   * @param {string} domain - The cookie domain.
-   * @param {string} path - The cookie path.
-   * @param {string} key - The cookie key.
-   * @param {FileCookieStore~findCookieCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | null | undefined>): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): Promise<Cookie | null | undefined>;
-  /**
-   *
-   * @param domain
-   * @param path
-   * @param key
-   * @param cb
-   */
-  findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | null | undefined>): (void | Promise<Cookie | null | undefined>) {
+  /** @inheritdoc */
+  findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | undefined>): (void | Promise<Cookie | null | undefined>) {
     if (this.synchronous) {
       if (cb) {
         let cookie
         try {
           cookie = this._findCookieSync(domain, path, key)
-        } catch(error) {
+        } catch (error) {
           cb(error, undefined)
           return
         }
@@ -251,21 +237,24 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param key
-   * @param cb
+   * Searches for a cookie after waiting for the initial read to finish.
+   * @see _doSyncReadAsAsync
+   * @param {string} domain - The cookie domain.
+   * @param {string} path - The cookie path.
+   * @param {string} key - The cookie key.
+   * @param {Function} cb - The callback that will be called with the result.
+   * @returns {Promise<Cookie>} a promise if no callback was passed.
    */
-  private _findCookieAsync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | null | undefined>) {
+  private _findCookieAsync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | null | undefined>): (void | Promise<Cookie>) {
     return this._doSyncReadAsAsync(() => this._findCookieSync(domain, path, key), cb)
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param key
+   * Searches for a cookie and returns it or null.
+   * @param {string} domain - The cookie domain.
+   * @param {string} path - The cookie path.
+   * @param {string} key - The cookie key.
+   * @returns {Cookie} the matching cookie if found.
    */
   private _findCookieSync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): (Cookie | null | undefined) {
     const cookiesMap = this.idx[domain]?.[path]
@@ -275,43 +264,12 @@ export default class FileCookieStore extends Store {
     return cookiesMap[key] || null
   }
 
-  /**
-   * The findCookies callback.
-   *
-   * @callback FileCookieStore~allowSpecialUseDomainCallback
-   * @param {Error} error - The error if any.
-   * @param {Cookie[]} cookies - Array of cookies.
-   */
-
-  /**
-   * The findCookies callback.
-   *
-   * @callback FileCookieStore~findCookiesCallback
-   * @param {Error} error - The error if any.
-   * @param {Cookie[]} cookies - Array of cookies.
-   */
-
-  /**
-   * Locates cookies matching the given domain and path.
-   *
-   * @param {string} domain - The cookie domain.
-   * @param {string} path - The cookie path.
-   * @param {FileCookieStore~allowSpecialUseDomainCallback} allowSpecialUseDomain - The callback.
-   * @param {FileCookieStore~findCookiesCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   findCookies(domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   findCookies(domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean): Promise<Cookie[]>;
-  /**
-   *
-   * @param domain
-   * @param path
-   * @param allowSpecialUseDomain
-   * @param cb
-   */
-  findCookies (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): (Cookie[] | Promise<Cookie[]>) {
+  /** @inheritdoc */
+  findCookies (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     if (typeof allowSpecialUseDomain === 'function') {
       cb = allowSpecialUseDomain
       allowSpecialUseDomain = false
@@ -321,7 +279,7 @@ export default class FileCookieStore extends Store {
         let cookies
         try {
           cookies = this._findCookiesSync(domain, path, allowSpecialUseDomain)
-        } catch(error) {
+        } catch (error) {
           cb(error, undefined)
           return
         }
@@ -335,21 +293,24 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param allowSpecialUseDomain
-   * @param cb
+   * Searches for cookies after waiting for the initial read to finish
+   * @see _doSyncReadAsAsync
+   * @param {string} domain - The cookies domain.
+   * @param {string} path - The cookies path.
+   * @param {boolean} allowSpecialUseDomain - If `true` then special-use domain suffixes will be allowed in matches. Defaults to `false`.
+   * @param {Function} cb - The callback that will be called with the result.
+   * @returns {Promise<Cookie[]>} a promise if no callback was passed.
    */
-  private _findCookiesAsync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean, cb?: Callback<Cookie[]>): (Cookie[] | Promise<Cookie[]>) {
+  private _findCookiesAsync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean, cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     return this._doSyncReadAsAsync(() => this._findCookiesSync(domain, path, allowSpecialUseDomain), cb)
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param allowSpecialUseDomain
+   * Searches for matching cookies and returns them.
+   * @param {string} domain - The cookies domain.
+   * @param {string} path - The cookies path.
+   * @param {boolean} allowSpecialUseDomain - If `true` then special-use domain suffixes will be allowed in matches. Defaults to `false`.
+   * @returns {Cookie[]} the matching cookies if any were found.
    */
   private _findCookiesSync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean): Cookie[] {
     const results = []
@@ -394,35 +355,17 @@ export default class FileCookieStore extends Store {
     return results
   }
 
-  /**
-   * The putCookie callback.
-   *
-   * @callback FileCookieStore~putCookieCallback
-   * @param {Error} error - The error if any.
-   */
-
-  /**
-   * Adds a new cookie to the store.
-   *
-   * @param {Cookie} cookie - The cookie.
-   * @param {FileCookieStore~putCookieCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   putCookie(cookie: Cookie, cb: ErrorCallback): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   putCookie(cookie: Cookie): Promise<void>;
-  /**
-   *
-   * @param cookie
-   * @param cb
-   */
+  /** @inheritdoc */
   putCookie (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (cb) {
         try {
           this._putCookieSync(cookie)
-        } catch(error) {
+        } catch (error) {
           cb(error)
           return
         }
@@ -436,9 +379,11 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cookie
-   * @param cb
+   * Puts a cookie in the store after waiting for the initial read to finish, then saves the store to its file.
+   * @see _doSyncReadAsAsync
+   * @param {Cookie} cookie - The cookie to add to the store.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _putCookieAsync (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
@@ -448,8 +393,8 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cookie
+   * Puts a cookie in the store without saving to a file.
+   * @param {Cookie} cookie - The cookie to add to the store.
    */
   private _putCookieSyncInternal (cookie: Cookie) {
     let domainVal = this.idx[cookie.domain]
@@ -466,77 +411,35 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cookie
+   * Puts a cookie in the store, then saves synchronously.
+   * @param {Cookie} cookie - The cookie to add to the store.
    */
   private _putCookieSync (cookie: Cookie) {
     this._putCookieSyncInternal(cookie)
     this._saveSync()
   }
 
-  /**
-   * The updateCookie callback.
-   *
-   * @callback FileCookieStore~updateCookieCallback
-   * @param {Error} error - The error if any.
-   */
-
-  /**
-   * Update an existing cookie.
-   *
-   * @param {Cookie} oldCookie - The old cookie.
-   * @param {Cookie} newCookie - The new cookie.
-   * @param {FileCookieStore~updateCookieCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   updateCookie(oldCookie: Cookie, newCookie: Cookie, cb: ErrorCallback): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   updateCookie(oldCookie: Cookie, newCookie: Cookie): Promise<void>;
-  /**
-   *
-   * @param oldCookie
-   * @param newCookie
-   * @param cb
-   */
+  /** @inheritdoc */
   updateCookie (oldCookie: Cookie, newCookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     // TODO delete old cookie?
     return this.putCookie(newCookie, cb)
   }
 
-  /**
-   * The removeCookie callback.
-   *
-   * @callback FileCookieStore~removeCookieCallback
-   * @param {Error} error - The error if any.
-   */
-
-  /**
-   * Remove a cookie from the store.
-   *
-   * @param {string} domain - The cookie domain.
-   * @param {string} path - The cookie path.
-   * @param {string} key - The cookie key.
-   * @param {FileCookieStore~removeCookieCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   removeCookie(domain: string, path: string, key: string, cb: ErrorCallback): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   removeCookie(domain: string, path: string, key: string): Promise<void>;
-  /**
-   *
-   * @param domain
-   * @param path
-   * @param key
-   * @param cb
-   */
+  /** @inheritdoc */
   removeCookie (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (cb) {
         try {
           this._removeCookieSync(domain, path, key)
-        } catch(error) {
+        } catch (error) {
           cb(error)
           return
         }
@@ -550,11 +453,13 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param key
-   * @param cb
+   * Removes a cookie from the store after waiting for the initial read to finish, then saves the store to its file if removed.
+   * @see _doSyncReadAsAsync
+   * @param {string} domain - The domain of the cookie to remove.
+   * @param {string} path - The path of the cookie to remove.
+   * @param {string} key - The key of the cookie to remove.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _removeCookieAsync (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
@@ -563,25 +468,37 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param key
+   * Removes a cookie from the store without saving to a file.
+   * @param {string} domain - The domain of the cookie to remove.
+   * @param {string} path - The path of the cookie to remove.
+   * @param {string} key - The key of the cookie to remove.
+   * @returns {boolean} true if a cookie was removed, or false if no change occured.
    */
   private _removeCookieSyncInternal (domain: string, path: string, key: string): boolean {
-    const pathVal = this.idx[domain]?.[path]
+    const domainVal = this.idx[domain]
+    if (!domainVal) {
+      return false
+    }
+    const pathVal = domainVal[path]
     if (!pathVal) {
       return false
     }
     const deleted = (delete pathVal[key])
+    // clean up entries if empty
+    if (deleted && !objectHasAnyKeys(pathVal)) {
+      delete domainVal[path]
+      if (!objectHasAnyKeys(domainVal)) {
+        delete this.idx[domain]
+      }
+    }
     return deleted
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param key
+   * Removes a cookie from the store, then saves synchronously if removed.
+   * @param {string} domain - The domain of the cookie to remove.
+   * @param {string} path - The path of the cookie to remove.
+   * @param {string} key - The key of the cookie to remove.
    */
   private _removeCookieSync (domain: string, path: string, key: string) {
     if (this._removeCookieSyncInternal(domain, path, key)) {
@@ -589,37 +506,17 @@ export default class FileCookieStore extends Store {
     }
   }
 
-  /**
-   * The removeCookies callback.
-   *
-   * @callback FileCookieStore~removeCookiesCallback
-   * @param {Error} error - The error if any.
-   */
-
-  /**
-   * Removes matching cookies from the store.
-   *
-   * @param {string} domain - The cookie domain.
-   * @param {string} path - The cookie path.
-   * @param {FileCookieStore~removeCookiesCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   removeCookies(domain: string, path: Nullable<string>, cb: ErrorCallback): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   removeCookies(domain: string, path: Nullable<string>): Promise<void>;
-  /**
-   *
-   * @param domain
-   * @param path
-   * @param cb
-   */
+  /** @inheritdoc */
   removeCookies (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (cb) {
         try {
           this._removeCookiesSync(domain, path)
-        } catch(error) {
+        } catch (error) {
           cb(error)
           return
         }
@@ -633,10 +530,12 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
-   * @param cb
+   * Removes cookies from the store after waiting for the initial read to finish, then saves the store to its file if any were removed.
+   * @see _doSyncReadAsAsync
+   * @param {string} domain - The domain of the cookies to remove.
+   * @param {string} path - The path of the cookies to remove.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _removeCookiesAsync (domain: string, path: string, cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
@@ -645,9 +544,10 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
+   * Removes cookies from the store without saving to a file.
+   * @param {string} domain - The domain of the cookies to remove.
+   * @param {string} path - The path of the cookies to remove.
+   * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
   private _removeCookiesSyncInternal (domain: string, path: string): boolean {
     // istanbul ignore else
@@ -655,6 +555,10 @@ export default class FileCookieStore extends Store {
       const domainVal = this.idx[domain]
       if (domainVal) {
         const deleted = (delete domainVal[path])
+        // clean up entries if empty
+        if (deleted && !objectHasAnyKeys(domainVal)) {
+          delete this.idx[domain]
+        }
         return deleted
       }
       return false
@@ -665,9 +569,9 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param domain
-   * @param path
+   * Removes cookies from the store, then saves synchronously if any were removed.
+   * @param {string} domain - The domain of the cookies to remove.
+   * @param {string} path - The path of the cookies to remove.
    */
   private _removeCookiesSync (domain: string, path: string) {
     if (this._removeCookiesSyncInternal(domain, path)) {
@@ -675,33 +579,17 @@ export default class FileCookieStore extends Store {
     }
   }
 
-  /**
-   * The removeAllCookies callback.
-   *
-   * @callback FileCookieStore~removeAllCookiesCallback
-   * @param {Error} error - The error if any.
-   */
-
-  /**
-   * Removes all cookies from the store.
-   *
-   * @param {FileCookieStore~removeAllCookiesCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   removeAllCookies(cb: ErrorCallback): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   removeAllCookies(): Promise<void>;
-  /**
-   *
-   * @param cb
-   */
+  /** @inheritdoc */
   removeAllCookies (cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (cb) {
         try {
           this._removeAllCookiesSync()
-        } catch(error) {
+        } catch (error) {
           cb(error)
           return
         }
@@ -715,8 +603,9 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cb
+   * Removes all cookies after waiting for the initial read to finish, then saves the store to its file if any were removed.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _removeAllCookiesAsync (cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
@@ -725,15 +614,19 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
+   * Removes all cookies from the store without saving to a file.
+   * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
   private _removeAllCookiesSyncInternal (): boolean {
+    if (!objectHasAnyKeys(this.idx)) {
+      return false
+    }
     this.idx = {}
     return true
   }
 
   /**
-   *
+   * Removes all cookies from the store, then saves synchronously if any were removed.
    */
   private _removeAllCookiesSync () {
     if (this._removeAllCookiesSyncInternal()) {
@@ -741,35 +634,18 @@ export default class FileCookieStore extends Store {
     }
   }
 
-  /**
-   * The getAllCookies callback.
-   *
-   * @callback FileCookieStore~getAllCookiesCallback
-   * @param {Error} error - The error if any.
-   * @param {Array} cookies - An array of cookies.
-   */
-
-  /**
-   * Produces an Array of all cookies from the store.
-   *
-   * @param {FileCookieStore~getAllCookiesCallback} cb - The callback.
-   */
+  /** @inheritdoc */
   getAllCookies(cb: Callback<Cookie[]>): void;
-  /**
-   *
-   */
+  /** @inheritdoc */
   getAllCookies(): Promise<Cookie[]>;
-  /**
-   *
-   * @param cb
-   */
+  /** @inheritdoc */
   getAllCookies (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     if (this.synchronous) {
       if (cb) {
         let cookies
         try {
           cookies = this._getAllCookiesSync()
-        } catch(error) {
+        } catch (error) {
           cb(error, undefined)
           return
         }
@@ -783,15 +659,17 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cb
+   * Gets all the cookies after waiting for the initial read to finish.
+   * @param {Function} cb - The callback to be called with the results.
+   * @returns {Promise<Cookie[]>} a promise if no callback was passed.
    */
   private _getAllCookiesAsync (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     return this._doSyncReadAsAsync(() => this._getAllCookiesSync(), cb)
   }
 
   /**
-   *
+   * Gets all the cookies in the store and returns them.
+   * @returns {Cookie[]} an array of all the cookies in the store.
    */
   private _getAllCookiesSync (): Cookie[] {
     const cookies: Cookie[] = []
@@ -825,16 +703,10 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   * The loadFromFile callback.
+   * Load the store from a file asynchronously.
    *
-   * @callback FileCookieStore~loadFromFileCallback
-   * @param {object} dataJson - The content of the store.
-   */
-
-  /**
-   * Load the store from file asynchronously.
-   *
-   * @param {string} filePath - The file in which the store will be created.
+   * @param {string} filePath - The file to load the store from.
+   * @returns {Promise<CookiesData>} a promise that resolves with the parsed data from the file.
    */
   private async _loadFromFileAsync (filePath: string): Promise<CookiesData> {
     await fs.promises.access(filePath)
@@ -843,9 +715,10 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   * Load the store from file synchronously.
+   * Load the store from a file synchronously.
    *
-   * @param {string} filePath - The file in which the store will be created.
+   * @param {string} filePath - The file to load the store from.
+   * @returns {CookiesData} the parsed data from the file
    */
   private _loadFromFileSync (filePath: string): CookiesData {
     let data: string | null = null
@@ -857,9 +730,10 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param data
-   * @param filePath
+   * Loads the store from a json string.
+   * @param {string} data - The string data that was loaded from a file.
+   * @param {string} filePath - The path of the file that the string data was loaded from.
+   * @returns {CookiesData} the parsed data
    */
   private _loadFromStringSync (data: string | null, filePath: string): CookiesData {
     // istanbul ignore else
@@ -870,10 +744,14 @@ export default class FileCookieStore extends Store {
       throw new Error(`Could not parse cookie file ${filePath}. Please ensure it is not corrupted.`)
     }
 
-    for (const d of Object.keys(dataJson)) {
-      for (const p of Object.keys(dataJson[d])) {
-        for (const k of Object.keys(dataJson[d][p])) {
-          dataJson[d][p][k] = Cookie.fromJSON(JSON.stringify(dataJson[d][p][k]))
+    // create Cookie instances of all entries
+    for (const d in dataJson) {
+      const dVal = dataJson[d]
+      for (const p in dVal) {
+        const pVal = dVal[p]
+        for (const k in pVal) {
+          // since Cookie is a class, we need to create an instance of it
+          pVal[k] = Cookie.fromJSON(JSON.stringify(pVal[k]))
         }
       }
     }
@@ -882,7 +760,8 @@ export default class FileCookieStore extends Store {
 
   /**
    * Saves the store to its file.
-   * @param cb
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _save (cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
@@ -894,8 +773,9 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param cb
+   * Saves the store to its file asynchronously.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
   private _saveAsync (cb?: ErrorCallback): (void | Promise<void>) {
     if (!this._nextWritePromise) {
@@ -960,7 +840,7 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
+   * Saves the store to its file synchronously.
    */
   private _saveSync () {
     this._saveToFileSync(this.filePath, this.idx)
@@ -975,12 +855,13 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param filePath
-   * @param data
-   * @param cb
+   * Saves the store to a file asynchronously.
+   * @param {string} filePath - The file path to save the store to.
+   * @param {CookiesData} data - The cookies to save to the file.
+   * @param {Function} cb - The callback to be called when finished.
+   * @returns {Promise} a promise if no callback was passed.
    */
-  private _saveToFileAsync (filePath: string, data: CookiesData, cb?: (error: Error) => void) {
+  private _saveToFileAsync (filePath: string, data: CookiesData, cb?: (error: Error) => void): (void | Promise<void>) {
     const dataString = JSON.stringify(data)
     if (cb) {
       fs.writeFile(filePath, dataString, cb)
@@ -990,12 +871,25 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   *
-   * @param filePath
-   * @param data
+   * Saves the store to a file synchronously.
+   * @param {string} filePath - The file path to save the store to.
+   * @param {CookiesData} data - The cookies to save to the file.
    */
   private _saveToFileSync (filePath: string, data: CookiesData): void {
     const dataString = JSON.stringify(data)
     fs.writeFileSync(filePath, dataString)
   }
+}
+
+/**
+ * Tells if the given object has any keys
+ * @param {object} obj - The object to check for any keys
+ * @returns {boolean} true if the object has a key, or false if the object has no keys.
+ */
+function objectHasAnyKeys (obj: object) {
+  // eslint-disable-next-line no-unreachable-loop
+  for (const key in obj) {
+    return true
+  }
+  return false
 }
