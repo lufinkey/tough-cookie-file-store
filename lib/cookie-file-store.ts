@@ -784,17 +784,10 @@ export default class FileCookieStore extends Store {
         let async = false
         // wait for active write to finish if any
         if (this._writePromise) {
-          // check if write is already done
-          let writeDone = false
-          const writePromise = this._writePromise.finally(() => {
-            writeDone = true
-          })
-          if (!writeDone) {
-            async = true
-          }
+          async = true
           // wait for write to finish
           try {
-            await writePromise
+            await this._writePromise
           } catch {
             // ignore error
           }
