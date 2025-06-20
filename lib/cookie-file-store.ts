@@ -95,10 +95,9 @@ export default class FileCookieStore extends Store {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
-        .catch(() => {}) // ignore error
       if (cb) {
         // handle with callback
-        promise.then(() => {
+        const continueFunc = () => {
           try {
             let result: TResult
             try {
@@ -111,10 +110,12 @@ export default class FileCookieStore extends Store {
           } catch (error) {
             console.error(error)
           }
-        })
+        }
+        promise.then(continueFunc, continueFunc)
       } else {
         // handle with promise
-        return promise.then(() => action())
+        const continueFunc = () => action()
+        return promise.then(continueFunc, continueFunc)
       }
     } else {
       // do action immediately
@@ -146,10 +147,9 @@ export default class FileCookieStore extends Store {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
-        .catch(() => {}) // ignore error
       if (cb) {
         // handle with callback
-        promise.then(() => {
+        const continueFunc = () => {
           let done = false
           try {
             // perform write action
@@ -178,14 +178,16 @@ export default class FileCookieStore extends Store {
               console.error(error)
             }
           }
-        })
+        }
+        promise.then(continueFunc, continueFunc)
       } else {
         // handle with promise
-        return promise.then(() => {
+        const continueFunc = () => {
           if (action()) {
             return this._save()
           }
-        })
+        }
+        return promise.then(continueFunc, continueFunc)
       }
     } else {
       // do action immediately
