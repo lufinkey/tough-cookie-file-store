@@ -118,10 +118,10 @@ function callbackFunc (done, func) {
  */
 function resolverForCount (count, done) {
   let called = false
-  let caughtError = undefined
+  let caughtError
   let callCount = 0
   return (error) => {
-    if(error && !caughtError) {
+    if (error && !caughtError) {
       caughtError = error
     }
     callCount++
@@ -130,7 +130,7 @@ function resolverForCount (count, done) {
         console.error(`Called resolver more than expected (${callCount} instead of ${count})`)
       } else {
         called = true
-        if(caughtError) {
+        if (caughtError) {
           done(caughtError)
         } else {
           done()
@@ -179,7 +179,7 @@ function fileCookieStoreTests () {
         done()
       }
     })
-    
+
     it('Should load cookie file successfully', function (done) {
       if (cookieStoreOptions?.loadAsync) {
         let detached = false
@@ -189,7 +189,7 @@ function fileCookieStoreTests () {
             try {
               expect(detached).to.eq(true)
               cookieStoreOptions?.onLoad?.()
-            } catch(error) {
+            } catch (error) {
               done(error)
               return
             }
@@ -420,6 +420,7 @@ function fileCookieStoreTests () {
         return innerSaveToFileSync.call(this, ...args)
       }
       removeCookie('example.com', '/', 'foo', callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
         expect(saveCount).to.eq(0)
         done()
       }))
@@ -442,6 +443,7 @@ function fileCookieStoreTests () {
           return innerSaveToFileSync.call(this, ...args)
         }
         removeCookie('example.com', '/login', 'foo', callbackFunc(done, (error) => {
+          expect(error).to.eq(null)
           expect(saveCount).to.eq(0)
           done()
         }))
@@ -495,6 +497,7 @@ function fileCookieStoreTests () {
         return innerSaveToFileSync.call(this, ...args)
       }
       removeCookies('example.com', '/', callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
         expect(saveCount).to.eq(0)
         done()
       }))
@@ -554,6 +557,7 @@ function fileCookieStoreTests () {
         return innerSaveToFileSync.call(this, ...args)
       }
       removeAllCookies(callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
         expect(saveCount).to.eq(0)
         done()
       }))
@@ -576,6 +580,7 @@ function fileCookieStoreTests () {
           return innerSaveToFileSync.call(this, ...args)
         }
         removeAllCookies(callbackFunc(done, (error) => {
+          expect(error).to.eq(null)
           expect(saveCount).to.eq(1)
           done()
         }))
@@ -646,6 +651,7 @@ function fileCookieStoreAsyncTests () {
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       // read cookies to make sure that read promise is done
       cookieStore.getAllCookies(callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
         // hook async / sync file writes
         let asyncSaveCount = 0
         let syncSaveCount = 0
@@ -707,7 +713,7 @@ function fileCookieStoreAsyncTests () {
       }))
     })
   })
-  
+
   describe('#_saveAsync', function () {
     afterAll(function () {
       fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
@@ -776,7 +782,7 @@ function fileCookieStoreAsyncTests () {
               expect(error).to.eq(null)
               resolveOne()
             }))
-          } catch(error) {
+          } catch (error) {
             resolveOne(error)
           }
         })()
