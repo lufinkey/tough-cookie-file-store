@@ -301,6 +301,27 @@ function fileCookieStoreTests () {
         done()
       }
     })
+
+    it('Should throw when json file holds a boolean', function (done) {
+      fs.writeFileSync(cookiesFileEmpty, 'true', { encoding: 'utf8', flag: 'w' })
+      if (cookieStoreOptions?.loadAsync) {
+        ;(() => new FileCookieStore(cookiesFileEmpty, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            cookieStoreOptions?.onLoad?.()
+            done(new Error("Load didn't fail"))
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            expect(error).to.be.instanceof(Error)
+            cookieStoreOptions?.onLoadError?.(error)
+            done()
+          })
+        }))()
+      } else {
+        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /invalid/)
+        done()
+      }
+    })
   })
 
   describe('#inspect', function () {
