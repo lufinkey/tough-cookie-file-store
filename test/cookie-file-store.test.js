@@ -641,7 +641,7 @@ function fileCookieStoreAsyncTests () {
     afterAll(function () {
       fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
     })
-    
+
     it('Writing, once read promise is finished, after switching from async to sync after a delay, should cause 2 async file writes and 1 sync file write', function (done) {
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       // read cookies to make sure that read promise is done
@@ -678,7 +678,7 @@ function fileCookieStoreAsyncTests () {
         ;(async () => {
           // delay
           await Promise.resolve()
-          // make sure a write promise exists
+          // make sure a write promise exists and that only 1 async write has happened
           try {
             expect(cookieStore._writePromise != null).to.eq(true)
             expect(syncSaveCount).to.eq(0)
