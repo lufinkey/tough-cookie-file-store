@@ -421,6 +421,7 @@ export default class FileCookieStore extends Store {
   /**
    * Puts a cookie in the store without saving to a file.
    * @param {Cookie} cookie - The cookie to add to the store.
+   * @returns {boolean} true if the store was changed, or false if the store was not changed.
    */
   private _putCookieSyncInternal (cookie: Cookie): boolean {
     const { domain, path, key } = cookie
@@ -460,7 +461,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   updateCookie (oldCookie: Cookie, newCookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     // TODO delete old cookie?
-    if(cb) {
+    if (cb) {
       return this.putCookie(newCookie, cb)
     } else {
       return this.putCookie(newCookie)
@@ -776,7 +777,7 @@ export default class FileCookieStore extends Store {
    * @returns {CookiesData} the parsed data
    */
   private _loadFromStringSync (data: string, filePath: string): (CookiesData | undefined) {
-    if(!data) {
+    if (!data) {
       // file is empty, so nothing to load
       return undefined
     }
@@ -788,10 +789,10 @@ export default class FileCookieStore extends Store {
     } catch {
       throw new Error(`Could not parse cookie file ${filePath}. Please ensure it is not corrupted.`)
     }
-    
+
     // ensure object is a json object
-    if(!dataJson || (typeof dataJson) !== 'object' || dataJson instanceof Array) {
-      throw new Error(`Cookies file is invalid`)
+    if (!dataJson || (typeof dataJson) !== 'object' || dataJson instanceof Array) {
+      throw new Error('Cookies file is invalid')
     }
 
     // create Cookie instances of all entries
@@ -804,9 +805,9 @@ export default class FileCookieStore extends Store {
           const valJson = JSON.stringify(pVal[k])
           const cookie = Cookie.fromJSON(valJson)
           // istanbul ignore else
-          if(cookie) {
+          if (cookie) {
             pVal[k] = cookie
-          } else if(valJson) {
+          } else if (valJson) {
             console.warn(`Failed to parse cookie object ${valJson}`)
           }
         }
