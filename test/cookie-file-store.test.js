@@ -168,7 +168,7 @@ function fileCookieStoreTests () {
       if (cookieStoreOptions?.loadAsync) {
         ;(() => new FileCookieStore(cookiesFileParseError, {
           ...cookieStoreOptions,
-          onLoad: callbackFunc(done, (exists) => {
+          onLoad: callbackFunc(done, () => {
             cookieStoreOptions?.onLoad?.()
             done(new Error("Load didn't fail"))
           }),
