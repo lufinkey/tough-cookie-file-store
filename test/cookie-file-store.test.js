@@ -466,6 +466,10 @@ function fileCookieStoreTests () {
   })
 
   storeMethodTests('removeCookies', function (removeCookies) {
+    afterAll(function () {
+      fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+    })
+
     it('Removing the only cookie should cause idx to be empty', function (done) {
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
@@ -475,6 +479,25 @@ function fileCookieStoreTests () {
           expect(Object.keys(cookieStore.idx).length).to.eq(0)
           done()
         }))
+      }))
+    })
+
+    it('Removing cookies that don\'t exist shouldn\'t cause a file write', function (done) {
+      let saveCount = 0
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      const innerSaveToFileAsync = cookieStore._saveToFileAsync
+      cookieStore._saveToFileAsync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileAsync.call(this, ...args)
+      }
+      const innerSaveToFileSync = cookieStore._saveToFileSync
+      cookieStore._saveToFileSync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileSync.call(this, ...args)
+      }
+      removeCookies('example.com', '/', callbackFunc(done, (error) => {
+        expect(saveCount).to.eq(0)
+        done()
       }))
     })
 
@@ -514,6 +537,10 @@ function fileCookieStoreTests () {
   })
 
   storeMethodTests('removeAllCookies', function (removeAllCookies) {
+    afterAll(function () {
+      fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+    })
+    
     it('Clearing an empty store shouldn\'t cause a file write', function (done) {
       let saveCount = 0
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
