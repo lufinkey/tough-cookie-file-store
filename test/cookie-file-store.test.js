@@ -9,6 +9,7 @@ import chaiDatetime from 'chai-datetime'
 import fs from 'fs'
 import path from 'path'
 let cookieStore
+let cookieStoreOptions
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const cookiesFile = path.join(__dirname, '/cookies.json')
@@ -122,7 +123,7 @@ function resolverForCount (count, done) {
     callCount++
     if (callCount >= count) {
       if (called) {
-        console.error('Called resolver more than expected')
+        console.error(`Called resolver more than expected (${callCount} instead of ${count})`)
       } else {
         called = true
         done()
@@ -135,27 +136,40 @@ function resolverForCount (count, done) {
  * Defines all the tests for a cookie store
  */
 function fileCookieStoreTests () {
-  describe('load', function () {
+  describe('#constructor', function () {
     it('FileCookieStore should be instance of Store class', function (done) {
       expect(cookieStore).to.be.instanceof(Store)
       done()
     })
-  })
 
-  describe('#constructor', function () {
     it('Should create object of FileCookieStore class', function (done) {
       expect(cookieStore).to.be.instanceof(FileCookieStore)
       done()
     })
 
     it('Should throw an error when filePath is undefined', function (done) {
-      ;(() => new FileCookieStore()).should.throw(Error, /Unknown/)
+      ;(() => new FileCookieStore(undefined, cookieStoreOptions)).should.throw(Error, /Unknown/)
       done()
     })
 
     it('Should throw an error when file can not be parsed', function (done) {
-      ;(() => new FileCookieStore(cookiesFileParseError)).should.throw(Error, /Could not parse cookie/)
-      done()
+      if (cookieStoreOptions.loadAsync) {
+        ;(() => new FileCookieStore(cookiesFileParseError, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            cookieStoreOptions?.onLoad()
+            done(new Error("Load didn't fail"))
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            expect(error).to.be.instanceof(Error)
+            cookieStoreOptions?.onLoadError?.(error)
+            done()
+          })
+        }))()
+      } else {
+        ;(() => new FileCookieStore(cookiesFileParseError, cookieStoreOptions)).should.throw(Error, /Could not parse cookie/)
+        done()
+      }
     })
   })
 
@@ -320,7 +334,7 @@ function fileCookieStoreTests () {
       cookie.expires = expiresDate
       cookie.creation = creationDate
       cookie.lastAccessed = lastAccessedDate
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       putCookie(cookie, callbackFunc(done, (error) => {
         expect(error).to.eq(null)
         cookieStore.findCookie('example.com', '/', 'baz', callbackFunc(done, (error, cookie) => {
@@ -379,7 +393,7 @@ function fileCookieStoreTests () {
     it('Should remove a cookie from the store', function (done) {
       const resolveOne = resolverForCount(2, done)
       const cookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       cookieStore.putCookie(cookie, resolveOne)
       removeCookie('example.com', '/', 'foo', callbackFunc(resolveOne, () => {
         cookieStore.findCookies('example.com', '/', callbackFunc(resolveOne, (error, cookies) => {
@@ -397,7 +411,7 @@ function fileCookieStoreTests () {
       const resolveOne = resolverForCount(3, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       cookieStore.putCookie(fooCookie, resolveOne)
       cookieStore.putCookie(barCookie, resolveOne)
       removeCookies('example.com', '/', callbackFunc(resolveOne, () => {
@@ -414,7 +428,7 @@ function fileCookieStoreTests () {
       const resolveOne = resolverForCount(3, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       cookieStore.putCookie(fooCookie, resolveOne)
       cookieStore.putCookie(barCookie, resolveOne)
       removeCookies('example.com', null, callbackFunc(resolveOne, () => {
@@ -433,7 +447,7 @@ function fileCookieStoreTests () {
       const resolveOne = resolverForCount(3, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       cookieStore.putCookie(fooCookie, resolveOne)
       cookieStore.putCookie(barCookie, resolveOne)
       removeAllCookies(callbackFunc(resolveOne, () => {
@@ -467,7 +481,7 @@ function fileCookieStoreTests () {
       const barCookie = Cookie.parse('bar=bar; Domain=example.com; Path=/bar')
       fooCookie.creationIndex = null
       barCookie.creationIndex = null
-      cookieStore = new FileCookieStore(cookiesFileEmpty)
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
       cookieStore.putCookie(fooCookie, resolveOne)
       cookieStore.putCookie(barCookie, resolveOne)
       getAllCookies(callbackFunc(resolveOne, (error, cookies) => {
@@ -480,12 +494,47 @@ function fileCookieStoreTests () {
   })
 }
 
+function fileCookieStoreAsyncTests () {
+  describe('_saveAsync', function () {
+    it('Multiple sequential calls to mutating methods should only cause a single write', function (done) {
+      let saveCount = 0
+      const resolveOne = resolverForCount(2, () => {
+        try {
+          expect(saveCount).to.eq(1)
+        } catch(error) {
+          done(error)
+          return
+        }
+        done()
+      })
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      const innerSaveToFileAsync = cookieStore._saveToFileAsync
+      cookieStore._saveToFileAsync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileAsync.call(this, ...args)
+      }
+      const buzCookie = Cookie.parse('buz=buz; Domain=example.com; Path=/buz')
+      cookieStore.putCookie(buzCookie, callbackFunc(resolveOne, (error) => {
+        expect(error).to.eq(null)
+        resolveOne()
+      }))
+      cookieStore.removeAllCookies(callbackFunc(resolveOne, (error) => {
+        expect(error).to.eq(null)
+        resolveOne()
+      }))
+    })
+  })
+}
+
 // Define the tests for each variant of the cookie store
 describe('Test cookie-file-store', function () {
   // Test synchronous methods
   describe('async = false', function () {
     beforeEach(function () {
-      cookieStore = new FileCookieStore(cookiesFile)
+      cookieStoreOptions = {
+        async: false
+      }
+      cookieStore = new FileCookieStore(cookiesFile, cookieStoreOptions)
       expect(cookieStore.synchronous).to.eq(true)
     })
 
@@ -495,26 +544,30 @@ describe('Test cookie-file-store', function () {
   // Test asynchronous methods on a store loaded synchronously
   describe('async = true, loadAsync = false', function () {
     beforeEach(function () {
-      cookieStore = new FileCookieStore(cookiesFile, {
+      cookieStoreOptions = {
         async: true,
         loadAsync: false
-      })
+      }
+      cookieStore = new FileCookieStore(cookiesFile, cookieStoreOptions)
       expect(cookieStore.synchronous).to.eq(false)
     })
 
     fileCookieStoreTests()
+    fileCookieStoreAsyncTests()
   })
 
   // Test asynchronous methods on a store loaded asynchronously
   describe('async = true, loadAsync = true', function () {
     beforeEach(function () {
-      cookieStore = new FileCookieStore(cookiesFile, {
+      cookieStoreOptions = {
         async: true,
         loadAsync: true
-      })
+      }
+      cookieStore = new FileCookieStore(cookiesFile, cookieStoreOptions)
       expect(cookieStore.synchronous).to.eq(false)
     })
 
     fileCookieStoreTests()
+    fileCookieStoreAsyncTests()
   })
 })
