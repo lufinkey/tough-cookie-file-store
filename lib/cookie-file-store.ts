@@ -740,9 +740,9 @@ export default class FileCookieStore extends Store {
    * @param {string} filePath - The file to load the store from.
    * @returns {CookiesData} the parsed data from the file
    */
-  private _loadFromFileSync (filePath: string): CookiesData {
+  private _loadFromFileSync (filePath: string): (CookiesData | undefined) {
     if (!fs.existsSync(this.filePath)) {
-      return
+      return undefined
     }
     const data = fs.readFileSync(filePath, 'utf8')
     return this._loadFromStringSync(data, filePath)
