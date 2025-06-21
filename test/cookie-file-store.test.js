@@ -206,6 +206,41 @@ function fileCookieStoreTests () {
         done()
       }
     })
+
+    it('Loading a non-existant file should not throw an error', function (done) {
+      const nonexistantCookiesFile = 'nonexistant-cookies-file.json'
+      if (cookieStoreOptions?.loadAsync) {
+        let detached = false
+        cookieStore = new FileCookieStore(nonexistantCookiesFile, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            try {
+              expect(detached).to.eq(true)
+              expect(Object.keys(cookieStore.idx).length).to.eq(0)
+              cookieStoreOptions?.onLoad?.()
+            } catch (error) {
+              done(error)
+              return
+            }
+            done()
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            cookieStoreOptions?.onLoadError?.(error)
+            done(error)
+          })
+        })
+        detached = true
+      } else {
+        try {
+          cookieStore = new FileCookieStore(nonexistantCookiesFile, cookieStoreOptions)
+          expect(Object.keys(cookieStore.idx).length).to.eq(0)
+        } catch (error) {
+          done(error)
+          return
+        }
+        done()
+      }
+    })
   })
 
   describe('#inspect', function () {

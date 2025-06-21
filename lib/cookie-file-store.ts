@@ -725,7 +725,11 @@ export default class FileCookieStore extends Store {
    * @returns {Promise<CookiesData>} a promise that resolves with the parsed data from the file.
    */
   private async _loadFromFileAsync (filePath: string): Promise<CookiesData> {
-    await fs.promises.access(filePath)
+    try {
+      await fs.promises.access(filePath, fs.constants.F_OK)
+    } catch {
+      return
+    }
     const data = await fs.promises.readFile(filePath, 'utf8')
     return this._loadFromStringSync(data, filePath)
   }
@@ -737,10 +741,10 @@ export default class FileCookieStore extends Store {
    * @returns {CookiesData} the parsed data from the file
    */
   private _loadFromFileSync (filePath: string): CookiesData {
-    let data: string | null = null
-    if (fs.existsSync(this.filePath)) {
-      data = fs.readFileSync(filePath, 'utf8')
+    if (!fs.existsSync(this.filePath)) {
+      return
     }
+    const data = fs.readFileSync(filePath, 'utf8')
     return this._loadFromStringSync(data, filePath)
   }
 
