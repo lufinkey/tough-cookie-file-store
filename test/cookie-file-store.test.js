@@ -541,8 +541,8 @@ function fileCookieStoreTests () {
     })
 
     it('Clearing an empty store shouldn\'t cause a file write', function (done) {
-      let saveCount = 0
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      let saveCount = 0
       const innerSaveToFileAsync = cookieStore._saveToFileAsync
       cookieStore._saveToFileAsync = function (...args) {
         saveCount += 1
@@ -556,6 +556,29 @@ function fileCookieStoreTests () {
       removeAllCookies(callbackFunc(done, (error) => {
         expect(saveCount).to.eq(0)
         done()
+      }))
+    })
+
+    it('Clearing a non-empty store should cause a single file write', function (done) {
+      const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      cookieStore.putCookie(fooCookie, callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
+        let saveCount = 0
+        const innerSaveToFileAsync = cookieStore._saveToFileAsync
+        cookieStore._saveToFileAsync = function (...args) {
+          saveCount += 1
+          return innerSaveToFileAsync.call(this, ...args)
+        }
+        const innerSaveToFileSync = cookieStore._saveToFileSync
+        cookieStore._saveToFileSync = function (...args) {
+          saveCount += 1
+          return innerSaveToFileSync.call(this, ...args)
+        }
+        removeAllCookies(callbackFunc(done, (error) => {
+          expect(saveCount).to.eq(1)
+          done()
+        }))
       }))
     })
 
@@ -614,7 +637,82 @@ function fileCookieStoreTests () {
  * Defines the tests for the async version of the cookie store
  */
 function fileCookieStoreAsyncTests () {
+  describe('#_save', function () {
+    afterAll(function () {
+      fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+    })
+    
+    it('Writing, once read promise is finished, after switching from async to sync after a delay, should cause 2 async file writes and 1 sync file write', function (done) {
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      // read cookies to make sure that read promise is done
+      cookieStore.getAllCookies(callbackFunc(done, (error) => {
+        // hook async / sync file writes
+        let asyncSaveCount = 0
+        let syncSaveCount = 0
+        const resolveOne = resolverForCount(3, () => {
+          try {
+            expect(syncSaveCount).to.eq(1)
+            expect(asyncSaveCount).to.eq(2)
+          } catch (error) {
+            done(error)
+            return
+          }
+          done()
+        })
+        const innerSaveToFileAsync = cookieStore._saveToFileAsync
+        cookieStore._saveToFileAsync = function (...args) {
+          asyncSaveCount += 1
+          return innerSaveToFileAsync.call(this, ...args)
+        }
+        const innerSaveToFileSync = cookieStore._saveToFileSync
+        cookieStore._saveToFileSync = function (...args) {
+          syncSaveCount += 1
+          return innerSaveToFileSync.call(this, ...args)
+        }
+        // write to store
+        const buzCookie = Cookie.parse('buz=buz; Domain=example.com; Path=/buz')
+        cookieStore.putCookie(buzCookie, callbackFunc(resolveOne, (error) => {
+          expect(error).to.eq(null)
+          resolveOne()
+        }))
+        ;(async () => {
+          // delay
+          await Promise.resolve()
+          // make sure a write promise exists
+          try {
+            expect(cookieStore._writePromise != null).to.eq(true)
+            expect(syncSaveCount).to.eq(0)
+            expect(asyncSaveCount).to.eq(1)
+          } catch (error) {
+            done(error)
+            return
+          }
+          // switch to synchronous
+          cookieStore.synchronous = true
+          try {
+            // cause another sync and async file write
+            cookieStore.removeAllCookies(callbackFunc(resolveOne, (error) => {
+              expect(error).to.eq(null)
+              resolveOne()
+            }))
+          } catch (error) {
+            resolveOne(error)
+          }
+          try {
+            cookieStore._nextWritePromise.then(resolveOne, resolveOne)
+          } catch (error) {
+            resolveOne(error)
+          }
+        })()
+      }))
+    })
+  })
+  
   describe('#_saveAsync', function () {
+    afterAll(function () {
+      fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+    })
+
     it('Multiple calls to mutating methods within tick should only cause a single write', function (done) {
       let saveCount = 0
       const resolveOne = resolverForCount(2, () => {

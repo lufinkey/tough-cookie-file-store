@@ -170,7 +170,7 @@ export default class FileCookieStore extends Store {
             // perform write action
             if (action()) {
               // save to file
-              this._save((error) => {
+              this._saveAsync((error) => {
                 // done
                 if (!done) {
                   done = true
@@ -202,7 +202,7 @@ export default class FileCookieStore extends Store {
         // handle with promise
         const continueFunc = () => {
           if (action()) {
-            return this._save()
+            return this._saveAsync()
           }
         }
         return promise.then(continueFunc, continueFunc)
@@ -223,7 +223,7 @@ export default class FileCookieStore extends Store {
         }
       }
       if (changed) {
-        return this._save(cb)
+        return this._saveAsync(cb)
       } else {
         if (typeof cb === 'function') {
           cb(null)
@@ -792,20 +792,6 @@ export default class FileCookieStore extends Store {
   }
 
   /**
-   * Saves the store to its file.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
-   */
-  private _save (cb?: ErrorCallback): (void | Promise<void>) {
-    if (this.synchronous) {
-      this._saveSync()
-      cb?.(null)
-    } else {
-      return this._saveAsync(cb)
-    }
-  }
-
-  /**
    * Saves the store to its file asynchronously.
    * @param {Function} cb - The callback to be called when finished.
    * @returns {Promise} a promise if no callback was passed.
@@ -880,16 +866,11 @@ export default class FileCookieStore extends Store {
    * Saves the store to a file asynchronously.
    * @param {string} filePath - The file path to save the store to.
    * @param {CookiesData} data - The cookies to save to the file.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @returns {Promise} a promise for the write task
    */
-  private _saveToFileAsync (filePath: string, data: CookiesData, cb?: (error: Error) => void): (void | Promise<void>) {
+  private _saveToFileAsync (filePath: string, data: CookiesData): Promise<void> {
     const dataString = JSON.stringify(data)
-    if (typeof cb === 'function') {
-      fs.writeFile(filePath, dataString, cb)
-    } else {
-      return fs.promises.writeFile(filePath, dataString)
-    }
+    return fs.promises.writeFile(filePath, dataString)
   }
 
   /**
