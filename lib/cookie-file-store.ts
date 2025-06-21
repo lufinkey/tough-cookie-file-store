@@ -4,15 +4,22 @@ import util from 'util'
 
 export type CookiesMap = {
   [key: string]: Cookie;
-};
+}
 
 export type CookiesDomainData = {
   [path: string]: CookiesMap;
-};
+}
 
 export type CookiesData = {
   [domain: string]: CookiesDomainData;
-};
+}
+
+export type FileCookieStoreOptions = {
+  async?: boolean,
+  loadAsync?: boolean,
+  onLoad?: () => void,
+  onLoadError?: (err: Error) => void
+}
 
 /**
  * Class representing a JSON file store.
@@ -38,11 +45,7 @@ export default class FileCookieStore extends Store {
    */
   constructor (
     filePath: string,
-    options?: {
-      async?: boolean,
-      loadAsync?: boolean,
-      onLoadError?: (err: Error) => void
-    }
+    options?: FileCookieStoreOptions,
   ) {
     super()
     this.synchronous = !options?.async
@@ -64,6 +67,9 @@ export default class FileCookieStore extends Store {
         delete this._readPromise
         if (dataJson) {
           this.idx = dataJson
+        }
+        if(options?.onLoad) {
+          options.onLoad()
         }
       }, err => {
         delete this._readPromise
@@ -850,7 +856,7 @@ export default class FileCookieStore extends Store {
     if (cb) {
       fs.writeFile(filePath, dataString, cb)
     } else {
-      return util.promisify(fs.writeFile)(filePath, dataString)
+      return fs.promises.writeFile(filePath, dataString)
     }
   }
 
