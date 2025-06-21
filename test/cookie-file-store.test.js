@@ -157,7 +157,7 @@ function fileCookieStoreTests () {
         ;(() => new FileCookieStore(cookiesFileParseError, {
           ...cookieStoreOptions,
           onLoad: callbackFunc(done, () => {
-            cookieStoreOptions?.onLoad()
+            cookieStoreOptions?.onLoad?.()
             done(new Error("Load didn't fail"))
           }),
           onLoadError: callbackFunc(done, (error) => {
@@ -168,6 +168,34 @@ function fileCookieStoreTests () {
         }))()
       } else {
         ;(() => new FileCookieStore(cookiesFileParseError, cookieStoreOptions)).should.throw(Error, /Could not parse cookie/)
+        done()
+      }
+    })
+
+    
+    it('Should load cookie file successfully', function (done) {
+      if (cookieStoreOptions?.loadAsync) {
+        let detached = false
+        ;(() => new FileCookieStore(cookiesFileEmpty, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            try {
+              expect(detached).to.eq(true)
+              cookieStoreOptions?.onLoad?.()
+            } catch(error) {
+              done(error)
+              return
+            }
+            done()
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            cookieStoreOptions?.onLoadError?.(error)
+            done(error)
+          })
+        }))()
+        detached = true
+      } else {
+        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.not.throw()
         done()
       }
     })
