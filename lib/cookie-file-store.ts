@@ -78,11 +78,13 @@ export default class FileCookieStore extends Store {
           console.error(err)
         }
       })
-      // istanbul ignore next
-      .catch((error) => {
+      .catch(
         // istanbul ignore next
-        console.error(error)
-      })
+        (error) => {
+          // istanbul ignore next
+          console.error(error)
+        }
+      )
     } else {
       const dataJson = this._loadFromFileSync(this.filePath)
       if (dataJson) {
@@ -110,7 +112,9 @@ export default class FileCookieStore extends Store {
             let result: TResult
             try {
               result = action()
-            } catch (error) {
+            } catch (error)
+            // istanbul ignore next
+            {
               cb(error, undefined)
               return
             }
@@ -132,7 +136,9 @@ export default class FileCookieStore extends Store {
         let result
         try {
           result = action()
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error, undefined)
           return
         }
@@ -179,13 +185,14 @@ export default class FileCookieStore extends Store {
               done = true
               cb(null)
             }
-          } catch (error) {
+          } catch (error)
+          // istanbul ignore next
+          {
             // only pass error to callback if it hasnt been called yet
             if (!done) {
               done = true
               cb(error)
             } else {
-              // istanbul ignore next
               console.error(error)
             }
           }
@@ -205,7 +212,9 @@ export default class FileCookieStore extends Store {
       let changed
       try {
         changed = action()
-      } catch (error) {
+      } catch (error)
+      // istanbul ignore next
+      {
         if (typeof cb === 'function') {
           cb(error)
           return
@@ -236,7 +245,9 @@ export default class FileCookieStore extends Store {
         let cookie
         try {
           cookie = this._findCookieSync(domain, path, key)
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error, undefined)
           return
         }
@@ -292,7 +303,9 @@ export default class FileCookieStore extends Store {
         let cookies
         try {
           cookies = this._findCookiesSync(domain, path, allowSpecialUseDomain)
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error, undefined)
           return
         }
@@ -378,7 +391,9 @@ export default class FileCookieStore extends Store {
       if (typeof cb === 'function') {
         try {
           this._putCookieSync(cookie)
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error)
           return
         }
@@ -452,7 +467,9 @@ export default class FileCookieStore extends Store {
       if (typeof cb === 'function') {
         try {
           this._removeCookieSync(domain, path, key)
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error)
           return
         }
@@ -529,7 +546,9 @@ export default class FileCookieStore extends Store {
       if (typeof cb === 'function') {
         try {
           this._removeCookiesSync(domain, path)
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error)
           return
         }
@@ -601,7 +620,9 @@ export default class FileCookieStore extends Store {
       if (typeof cb === 'function') {
         try {
           this._removeAllCookiesSync()
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error)
           return
         }
@@ -657,7 +678,9 @@ export default class FileCookieStore extends Store {
         let cookies
         try {
           cookies = this._getAllCookiesSync()
-        } catch (error) {
+        } catch (error)
+        // istanbul ignore next
+        {
           cb(error, undefined)
           return
         }
@@ -820,13 +843,18 @@ export default class FileCookieStore extends Store {
       this._nextWritePromise
         .then(() => {
           cb(null)
-        }, (error) => {
+        },
+        // istanbul ignore next
+        (error) => {
           cb(error)
         })
-        .catch((error) => {
+        .catch(
           // istanbul ignore next
-          console.error(error)
-        })
+          (error) => {
+            // istanbul ignore next
+            console.error(error)
+          }
+        )
     } else {
       return this._nextWritePromise
     }
