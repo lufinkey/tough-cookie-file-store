@@ -395,6 +395,25 @@ function fileCookieStoreTests () {
   })
 
   storeMethodTests('removeCookie', function (removeCookie) {
+    it('Removing a cookie that doesn\'t exist shouldn\'t cause a file write', function (done) {
+      let saveCount = 0
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      const innerSaveToFileAsync = cookieStore._saveToFileAsync
+      cookieStore._saveToFileAsync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileAsync.call(this, ...args)
+      }
+      const innerSaveToFileSync = cookieStore._saveToFileSync
+      cookieStore._saveToFileSync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileSync.call(this, ...args)
+      }
+      removeCookie('example.com', '/', 'foo', callbackFunc(done, (error) => {
+        expect(saveCount).to.eq(0)
+        done()
+      }))
+    })
+
     it('Should remove a cookie from the store', function (done) {
       const resolveOne = resolverForCount(2, done)
       const cookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
