@@ -208,7 +208,7 @@ function fileCookieStoreTests () {
     })
 
     it('Loading a non-existant file should not throw an error', function (done) {
-      const nonexistantCookiesFile = 'nonexistant-cookies-file.json'
+      const nonexistantCookiesFile = path.join(__dirname, 'nonexistant-cookies-file.json')
       if (cookieStoreOptions?.loadAsync) {
         let detached = false
         cookieStore = new FileCookieStore(nonexistantCookiesFile, {
