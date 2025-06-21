@@ -431,6 +431,17 @@ function fileCookieStoreTests () {
   })
 
   storeMethodTests('removeCookies', function (removeCookies) {
+    it('Removing the only cookie should cause idx to be empty', function (done) {
+      const resolveOne = resolverForCount(2, done)
+      const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      cookieStore.putCookie(fooCookie, resolveOne)
+      removeCookies('example.com', '/', callbackFunc(resolveOne, () => {
+        expect(Object.keys(cookieStore.idx).length).to.eq(0)
+        resolveOne()
+      }))
+    })
+
     it('Should remove matching cookies from the store (domain + path)', function (done) {
       const resolveOne = resolverForCount(3, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
@@ -467,6 +478,25 @@ function fileCookieStoreTests () {
   })
 
   storeMethodTests('removeAllCookies', function (removeAllCookies) {
+    it('Clearing an empty store shouldn\'t cause a file write', function (done) {
+      let saveCount = 0
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      const innerSaveToFileAsync = cookieStore._saveToFileAsync
+      cookieStore._saveToFileAsync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileAsync.call(this, ...args)
+      }
+      const innerSaveToFileSync = cookieStore._saveToFileSync
+      cookieStore._saveToFileSync = function (...args) {
+        saveCount += 1
+        return innerSaveToFileSync.call(this, ...args)
+      }
+      removeAllCookies(callbackFunc(done, (error) => {
+        expect(saveCount).to.eq(0)
+        done()
+      }))
+    })
+
     it('Should remove all cookies from the store', function (done) {
       const resolveOne = resolverForCount(3, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
