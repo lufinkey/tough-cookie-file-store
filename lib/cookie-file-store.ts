@@ -1,31 +1,23 @@
-import {
-  Callback,
-  Cookie,
-  ErrorCallback,
-  Nullable,
-  Store,
-  permuteDomain,
-  pathMatch
-} from 'tough-cookie'
+import * as tough from 'tough-cookie'
 import fs from 'fs'
 import util from 'util'
 
 export type CookiesMap = {
-  [key: string]: Cookie;
+  [key: string]: tough.Cookie
 }
 
 export type CookiesDomainData = {
-  [path: string]: CookiesMap;
+  [path: string]: CookiesMap
 }
 
 export type CookiesData = {
-  [domain: string]: CookiesDomainData;
+  [domain: string]: CookiesDomainData
 }
 
 export type FileCookieStoreOptions = {
-  async?: boolean,
-  loadAsync?: boolean,
-  onLoad?: (exists: boolean) => void,
+  async?: boolean
+  loadAsync?: boolean
+  onLoad?: (exists: boolean) => void
   onLoadError?: (err: Error) => void
 }
 
@@ -34,7 +26,7 @@ export type FileCookieStoreOptions = {
  *
  * @augments Store
  */
-export default class FileCookieStore extends Store {
+export default class FileCookieStore extends tough.Store {
   synchronous: boolean
   filePath: string
   idx: CookiesData = {}
@@ -49,7 +41,7 @@ export default class FileCookieStore extends Store {
    * @param {object} options - Options for initializing the store.
    * @param {boolean} options.async - Whether to write the file asynchronously.
    * @param {boolean} options.loadAsync - Whether to read the file asynchronously.
-   * @param {Function} options.onLoadError - Optional callback for any async file-load error. Unused if `loadAsync` is false.
+   * @param {Function} options.onLoadError - Optional tough.Callback for any async file-load error. Unused if `loadAsync` is false.
    */
   constructor (
     filePath: string,
@@ -105,18 +97,18 @@ export default class FileCookieStore extends Store {
 
   /**
    * Waits for the initial load to finish if unfinished, and then performs the given synchronous read action.
-   * Afterwards, the callback will be called with an error or a result. If no callback is passed, a promise
+   * Afterwards, the tough.Callback will be called with an error or a result. If no tough.Callback is passed, a promise
    * will be returned instead.
    * @param {Function} action - The synchronous read action to execute
-   * @param {Function} cb - The callback to call with the error or result
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to call with the error or result
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _doSyncReadAsAsync<TResult> (action: () => TResult, cb: Callback<TResult> | undefined): (void | Promise<TResult>) {
+  private _doSyncReadAsAsync<TResult> (action: () => TResult, cb: tough.Callback<TResult> | undefined): (void | Promise<TResult>) {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
       if (typeof cb === 'function') {
-        // handle with callback
+        // handle with tough.Callback
         const continueFunc = () => {
           try {
             let result: TResult
@@ -158,18 +150,18 @@ export default class FileCookieStore extends Store {
   /**
    * Waits for the initial load to finish if unfinished, and then performs the given synchronous write action.
    * Afterwards, if the store has changed, then changes to the store will be saved to its file, and then
-   * the callback will be called with an error if any, or `null` if no error. If no callback is passed, a
+   * the tough.Callback will be called with an error if any, or `null` if no error. If no tough.Callback is passed, a
    * promise will be returned instead.
    * @param {Function} action - The synchronous write action to execute. This should return a boolean indicating whether the store has changed.
-   * @param {Function} cb - The callback to call with the error or result
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to call with the error or result
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
   _doSyncWriteAsAsync (action: () => boolean, cb: (((error: Error | null) => void) | undefined)): (void | Promise<void>) {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
       if (typeof cb === 'function') {
-        // handle with callback
+        // handle with tough.Callback
         const continueFunc = () => {
           let done = false
           try {
@@ -193,7 +185,7 @@ export default class FileCookieStore extends Store {
               cb(null)
             }
           } catch (error) /* istanbul ignore next */ {
-            // only pass error to callback if it hasnt been called yet
+            // only pass error to tough.Callback if it hasnt been called yet
             if (!done) {
               done = true
               cb(error)
@@ -238,11 +230,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | undefined>): void;
+  findCookie(domain: tough.Nullable<string>, path: tough.Nullable<string>, key: tough.Nullable<string>, cb: tough.Callback<tough.Cookie | undefined>): void;
   /** @inheritdoc */
-  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): Promise<Cookie | undefined>;
+  findCookie(domain: tough.Nullable<string>, path: tough.Nullable<string>, key: tough.Nullable<string>): Promise<tough.Cookie | undefined>;
   /** @inheritdoc */
-  findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | undefined>): (void | Promise<Cookie | undefined>) {
+  findCookie (domain: tough.Nullable<string>, path: tough.Nullable<string>, key: tough.Nullable<string>, cb?: tough.Callback<tough.Cookie | undefined>): (void | Promise<tough.Cookie | undefined>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         let cookie
@@ -267,10 +259,10 @@ export default class FileCookieStore extends Store {
    * @param {string} domain - The cookie domain.
    * @param {string} path - The cookie path.
    * @param {string} key - The cookie key.
-   * @param {Function} cb - The callback that will be called with the result.
-   * @returns {Promise<Cookie>} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback that will be called with the result.
+   * @returns {Promise<tough.Cookie>} a promise if no tough.Callback was passed.
    */
-  private _findCookieAsync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | undefined> | undefined): (void | Promise<Cookie | undefined>) {
+  private _findCookieAsync (domain: tough.Nullable<string>, path: tough.Nullable<string>, key: tough.Nullable<string>, cb: tough.Callback<tough.Cookie | undefined> | undefined): (void | Promise<tough.Cookie | undefined>) {
     return this._doSyncReadAsAsync(() => this._findCookieSync(domain, path, key), cb)
   }
 
@@ -281,7 +273,7 @@ export default class FileCookieStore extends Store {
    * @param {string} key - The cookie key.
    * @returns {Cookie} the matching cookie if found.
    */
-  private _findCookieSync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): (Cookie | undefined) {
+  private _findCookieSync (domain: tough.Nullable<string>, path: tough.Nullable<string>, key: tough.Nullable<string>): (tough.Cookie | undefined) {
     // istanbul ignore next
     if (domain == null || path == null || key == null) {
       return undefined
@@ -290,11 +282,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  findCookies(domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): void;
+  findCookies(domain: tough.Nullable<string>, path: tough.Nullable<string>, allowSpecialUseDomain?: boolean, cb?: tough.Callback<tough.Cookie[]>): void;
   /** @inheritdoc */
-  findCookies(domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean): Promise<Cookie[]>;
+  findCookies(domain: tough.Nullable<string>, path: tough.Nullable<string>, allowSpecialUseDomain?: boolean): Promise<tough.Cookie[]>;
   /** @inheritdoc */
-  findCookies (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
+  findCookies (domain: tough.Nullable<string>, path: tough.Nullable<string>, allowSpecialUseDomain?: boolean, cb?: tough.Callback<tough.Cookie[]>): (void | Promise<tough.Cookie[]>) {
     if (typeof allowSpecialUseDomain === 'function') {
       cb = allowSpecialUseDomain
       allowSpecialUseDomain = undefined
@@ -325,10 +317,10 @@ export default class FileCookieStore extends Store {
    * @param {string} domain - The cookies domain.
    * @param {string} path - The cookies path.
    * @param {boolean} allowSpecialUseDomain - If `true` then special-use domain suffixes will be allowed in matches. Defaults to `false`.
-   * @param {Function} cb - The callback that will be called with the result.
-   * @returns {Promise<Cookie[]>} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback that will be called with the result.
+   * @returns {Promise<tough.Cookie[]>} a promise if no tough.Callback was passed.
    */
-  private _findCookiesAsync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean, cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
+  private _findCookiesAsync (domain: tough.Nullable<string>, path: tough.Nullable<string>, allowSpecialUseDomain: boolean, cb?: tough.Callback<tough.Cookie[]>): (void | Promise<tough.Cookie[]>) {
     return this._doSyncReadAsAsync(() => this._findCookiesSync(domain, path, allowSpecialUseDomain), cb)
   }
 
@@ -339,8 +331,8 @@ export default class FileCookieStore extends Store {
    * @param {boolean} allowSpecialUseDomain - If `true` then special-use domain suffixes will be allowed in matches. Defaults to `false`.
    * @returns {Cookie[]} the matching cookies if any were found.
    */
-  private _findCookiesSync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean): Cookie[] {
-    const results: Cookie[] = []
+  private _findCookiesSync (domain: tough.Nullable<string>, path: tough.Nullable<string>, allowSpecialUseDomain: boolean): tough.Cookie[] {
+    const results: tough.Cookie[] = []
 
     if (!domain) {
       return results
@@ -359,7 +351,7 @@ export default class FileCookieStore extends Store {
     } else {
       pathMatcher = function matchRFC (domainIndex: CookiesDomainData) {
         for (const cookiePath of Object.keys(domainIndex)) {
-          if (pathMatch(path, cookiePath)) {
+          if (tough.pathMatch(path, cookiePath)) {
             const pathIndex = domainIndex[cookiePath]
             for (const key of Object.keys(pathIndex)) {
               results.push(pathIndex[key])
@@ -369,7 +361,7 @@ export default class FileCookieStore extends Store {
       }
     }
 
-    const domains = permuteDomain(domain, allowSpecialUseDomain) || [domain]
+    const domains = tough.permuteDomain(domain, allowSpecialUseDomain) || [domain]
     const idx = this.idx
     for (const curDomain of domains) {
       const domainIndex = idx[curDomain]
@@ -383,11 +375,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  putCookie(cookie: Cookie, cb: ErrorCallback): void;
+  putCookie(cookie: tough.Cookie, cb: tough.ErrorCallback): void;
   /** @inheritdoc */
-  putCookie(cookie: Cookie): Promise<void>;
+  putCookie(cookie: tough.Cookie): Promise<void>;
   /** @inheritdoc */
-  putCookie (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
+  putCookie (cookie: tough.Cookie, cb?: tough.ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         try {
@@ -409,10 +401,10 @@ export default class FileCookieStore extends Store {
    * Puts a cookie in the store after waiting for the initial read to finish, then saves the store to its file.
    * @see _doSyncReadAsAsync
    * @param {Cookie} cookie - The cookie to add to the store.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called when finished.
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _putCookieAsync (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
+  private _putCookieAsync (cookie: tough.Cookie, cb?: tough.ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
       return this._putCookieSyncInternal(cookie)
     }, cb)
@@ -423,7 +415,7 @@ export default class FileCookieStore extends Store {
    * @param {Cookie} cookie - The cookie to add to the store.
    * @returns {boolean} true if the store was changed, or false if the store was not changed.
    */
-  private _putCookieSyncInternal (cookie: Cookie): boolean {
+  private _putCookieSyncInternal (cookie: tough.Cookie): boolean {
     const { domain, path, key } = cookie
     // Guarding against invalid input
     // istanbul ignore next
@@ -448,18 +440,18 @@ export default class FileCookieStore extends Store {
    * Puts a cookie in the store, then saves synchronously.
    * @param {Cookie} cookie - The cookie to add to the store.
    */
-  private _putCookieSync (cookie: Cookie) {
+  private _putCookieSync (cookie: tough.Cookie) {
     if (this._putCookieSyncInternal(cookie)) {
       this._saveSync()
     }
   }
 
   /** @inheritdoc */
-  updateCookie(oldCookie: Cookie, newCookie: Cookie, cb: ErrorCallback): void;
+  updateCookie(oldCookie: tough.Cookie, newCookie: tough.Cookie, cb: tough.ErrorCallback): void;
   /** @inheritdoc */
-  updateCookie(oldCookie: Cookie, newCookie: Cookie): Promise<void>;
+  updateCookie(oldCookie: tough.Cookie, newCookie: tough.Cookie): Promise<void>;
   /** @inheritdoc */
-  updateCookie (oldCookie: Cookie, newCookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
+  updateCookie (oldCookie: tough.Cookie, newCookie: tough.Cookie, cb?: tough.ErrorCallback): (void | Promise<void>) {
     // TODO delete old cookie?
     if (cb) {
       return this.putCookie(newCookie, cb)
@@ -469,11 +461,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  removeCookie(domain: string, path: string, key: string, cb: ErrorCallback): void;
+  removeCookie(domain: string, path: string, key: string, cb: tough.ErrorCallback): void;
   /** @inheritdoc */
   removeCookie(domain: string, path: string, key: string): Promise<void>;
   /** @inheritdoc */
-  removeCookie (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
+  removeCookie (domain: string, path: string, key: string, cb?: tough.ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         try {
@@ -497,10 +489,10 @@ export default class FileCookieStore extends Store {
    * @param {string} domain - The domain of the cookie to remove.
    * @param {string} path - The path of the cookie to remove.
    * @param {string} key - The key of the cookie to remove.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called when finished.
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _removeCookieAsync (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
+  private _removeCookieAsync (domain: string, path: string, key: string, cb?: tough.ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
       return this._removeCookieSyncInternal(domain, path, key)
     }, cb)
@@ -546,11 +538,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  removeCookies(domain: string, path: Nullable<string>, cb: ErrorCallback): void;
+  removeCookies(domain: string, path: tough.Nullable<string>, cb: tough.ErrorCallback): void;
   /** @inheritdoc */
-  removeCookies(domain: string, path: Nullable<string>): Promise<void>;
+  removeCookies(domain: string, path: tough.Nullable<string>): Promise<void>;
   /** @inheritdoc */
-  removeCookies (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
+  removeCookies (domain: string, path: tough.Nullable<string>, cb?: tough.ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         try {
@@ -573,10 +565,10 @@ export default class FileCookieStore extends Store {
    * @see _doSyncReadAsAsync
    * @param {string} domain - The domain of the cookies to remove.
    * @param {string} path - The path of the cookies to remove.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called when finished.
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _removeCookiesAsync (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
+  private _removeCookiesAsync (domain: string, path: tough.Nullable<string>, cb?: tough.ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
       return this._removeCookiesSyncInternal(domain, path)
     }, cb)
@@ -588,7 +580,7 @@ export default class FileCookieStore extends Store {
    * @param {string} path - The path of the cookies to remove.
    * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
-  private _removeCookiesSyncInternal (domain: string, path: Nullable<string>): boolean {
+  private _removeCookiesSyncInternal (domain: string, path: tough.Nullable<string>): boolean {
     if (path != null) {
       const domainVal = this.idx[domain]
       if (domainVal) {
@@ -611,18 +603,18 @@ export default class FileCookieStore extends Store {
    * @param {string} domain - The domain of the cookies to remove.
    * @param {string} path - The path of the cookies to remove.
    */
-  private _removeCookiesSync (domain: string, path: Nullable<string>) {
+  private _removeCookiesSync (domain: string, path: tough.Nullable<string>) {
     if (this._removeCookiesSyncInternal(domain, path)) {
       this._saveSync()
     }
   }
 
   /** @inheritdoc */
-  removeAllCookies(cb: ErrorCallback): void;
+  removeAllCookies(cb: tough.ErrorCallback): void;
   /** @inheritdoc */
   removeAllCookies(): Promise<void>;
   /** @inheritdoc */
-  removeAllCookies (cb?: ErrorCallback): (void | Promise<void>) {
+  removeAllCookies (cb?: tough.ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         try {
@@ -642,10 +634,10 @@ export default class FileCookieStore extends Store {
 
   /**
    * Removes all cookies after waiting for the initial read to finish, then saves the store to its file if any were removed.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called when finished.
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _removeAllCookiesAsync (cb?: ErrorCallback): (void | Promise<void>) {
+  private _removeAllCookiesAsync (cb?: tough.ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
       return this._removeAllCookiesSyncInternal()
     }, cb)
@@ -673,11 +665,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  getAllCookies(cb: Callback<Cookie[]>): void;
+  getAllCookies(cb: tough.Callback<tough.Cookie[]>): void;
   /** @inheritdoc */
-  getAllCookies(): Promise<Cookie[]>;
+  getAllCookies(): Promise<tough.Cookie[]>;
   /** @inheritdoc */
-  getAllCookies (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
+  getAllCookies (cb?: tough.Callback<tough.Cookie[]>): (void | Promise<tough.Cookie[]>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         let cookies
@@ -698,10 +690,10 @@ export default class FileCookieStore extends Store {
 
   /**
    * Gets all the cookies after waiting for the initial read to finish.
-   * @param {Function} cb - The callback to be called with the results.
-   * @returns {Promise<Cookie[]>} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called with the results.
+   * @returns {Promise<tough.Cookie[]>} a promise if no tough.Callback was passed.
    */
-  private _getAllCookiesAsync (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
+  private _getAllCookiesAsync (cb?: tough.Callback<tough.Cookie[]>): (void | Promise<tough.Cookie[]>) {
     return this._doSyncReadAsAsync(() => this._getAllCookiesSync(), cb)
   }
 
@@ -709,8 +701,8 @@ export default class FileCookieStore extends Store {
    * Gets all the cookies in the store and returns them.
    * @returns {Cookie[]} an array of all the cookies in the store.
    */
-  private _getAllCookiesSync (): Cookie[] {
-    const cookies: Cookie[] = []
+  private _getAllCookiesSync (): tough.Cookie[] {
+    const cookies: tough.Cookie[] = []
     for (const domain of Object.keys(this.idx)) {
       const domainVal = this.idx[domain]
       for (const p of Object.keys(domainVal)) {
@@ -803,7 +795,7 @@ export default class FileCookieStore extends Store {
         for (const k of Object.keys(pVal)) {
           // since Cookie is a class, we need to create an instance of it
           const valJson = JSON.stringify(pVal[k])
-          const cookie = Cookie.fromJSON(valJson)
+          const cookie = tough.Cookie.fromJSON(valJson)
           // istanbul ignore else
           if (cookie) {
             pVal[k] = cookie
@@ -818,10 +810,10 @@ export default class FileCookieStore extends Store {
 
   /**
    * Saves the store to its file asynchronously.
-   * @param {Function} cb - The callback to be called when finished.
-   * @returns {Promise} a promise if no callback was passed.
+   * @param {Function} cb - The tough.Callback to be called when finished.
+   * @returns {Promise} a promise if no tough.Callback was passed.
    */
-  private _saveAsync (cb?: ErrorCallback): (void | Promise<void>) {
+  private _saveAsync (cb?: tough.ErrorCallback): (void | Promise<void>) {
     if (!this._nextWritePromise) {
       // create next write promise
       this._nextWritePromise = (async () => {
