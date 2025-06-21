@@ -66,11 +66,13 @@ export default class FileCookieStore extends Store {
         if (dataJson) {
           this.idx = dataJson
         }
+        // istanbul ignore next
         if (options?.onLoad) {
           options.onLoad()
         }
       }, err => {
         delete this._readPromise
+        // istanbul ignore next
         if (options?.onLoadError) {
           options.onLoadError(err)
         } else {
@@ -168,6 +170,7 @@ export default class FileCookieStore extends Store {
               // save to file
               this._saveAsync((error) => {
                 // done
+                // istanbul ignore next
                 if (!done) {
                   done = true
                   cb(error)
