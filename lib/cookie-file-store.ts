@@ -1,4 +1,12 @@
-import { Store, permuteDomain, pathMatch, Cookie, Callback, Nullable } from 'tough-cookie'
+import {
+  Callback,
+  Cookie,
+  ErrorCallback,
+  Nullable,
+  Store,
+  permuteDomain,
+  pathMatch
+} from 'tough-cookie'
 import fs from 'fs'
 import util from 'util'
 
@@ -30,7 +38,7 @@ export default class FileCookieStore extends Store {
   synchronous: boolean
   filePath: string
   idx: CookiesData = {}
-  private _readPromise: Promise<CookiesData> | undefined
+  private _readPromise: Promise<CookiesData | undefined> | undefined
   private _writePromise: Promise<void> | undefined
   private _nextWritePromise: Promise<void> | undefined
 
@@ -156,7 +164,7 @@ export default class FileCookieStore extends Store {
    * @param {Function} cb - The callback to call with the error or result
    * @returns {Promise} a promise if no callback was passed.
    */
-  _doSyncWriteAsAsync (action: () => boolean, cb: ErrorCallback | undefined): (void | Promise<void>) {
+  _doSyncWriteAsAsync (action: () => boolean, cb: (((error: Error | null) => void) | undefined)): (void | Promise<void>) {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
@@ -230,11 +238,11 @@ export default class FileCookieStore extends Store {
   }
 
   /** @inheritdoc */
-  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | null | undefined>): void;
+  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | undefined>): void;
   /** @inheritdoc */
-  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): Promise<Cookie | null | undefined>;
+  findCookie(domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): Promise<Cookie | undefined>;
   /** @inheritdoc */
-  findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | undefined>): (void | Promise<Cookie | null | undefined>) {
+  findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | undefined>): (void | Promise<Cookie | undefined>) {
     if (this.synchronous) {
       if (typeof cb === 'function') {
         let cookie
@@ -262,7 +270,7 @@ export default class FileCookieStore extends Store {
    * @param {Function} cb - The callback that will be called with the result.
    * @returns {Promise<Cookie>} a promise if no callback was passed.
    */
-  private _findCookieAsync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | null | undefined>): (void | Promise<Cookie>) {
+  private _findCookieAsync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb: Callback<Cookie | undefined> | undefined): (void | Promise<Cookie | undefined>) {
     return this._doSyncReadAsAsync(() => this._findCookieSync(domain, path, key), cb)
   }
 
@@ -273,12 +281,12 @@ export default class FileCookieStore extends Store {
    * @param {string} key - The cookie key.
    * @returns {Cookie} the matching cookie if found.
    */
-  private _findCookieSync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): (Cookie | null | undefined) {
-    const cookiesMap = this.idx[domain]?.[path]
-    if (!cookiesMap) {
+  private _findCookieSync (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>): (Cookie | undefined) {
+    // istanbul ignore next
+    if (domain == null || path == null || key == null) {
       return undefined
     }
-    return cookiesMap[key] || null
+    return this.idx[domain]?.[path]?.[key]
   }
 
   /** @inheritdoc */
@@ -289,8 +297,10 @@ export default class FileCookieStore extends Store {
   findCookies (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain?: boolean, cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     if (typeof allowSpecialUseDomain === 'function') {
       cb = allowSpecialUseDomain
-      allowSpecialUseDomain = false
+      allowSpecialUseDomain = undefined
     }
+    // istanbul ignore next
+    allowSpecialUseDomain ??= false
     if (this.synchronous) {
       if (typeof cb === 'function') {
         let cookies
@@ -330,7 +340,7 @@ export default class FileCookieStore extends Store {
    * @returns {Cookie[]} the matching cookies if any were found.
    */
   private _findCookiesSync (domain: Nullable<string>, path: Nullable<string>, allowSpecialUseDomain: boolean): Cookie[] {
-    const results = []
+    const results: Cookie[] = []
 
     if (!domain) {
       return results
@@ -404,8 +414,7 @@ export default class FileCookieStore extends Store {
    */
   private _putCookieAsync (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
-      this._putCookieSyncInternal(cookie)
-      return true
+      return this._putCookieSyncInternal(cookie)
     }, cb)
   }
 
@@ -413,18 +422,25 @@ export default class FileCookieStore extends Store {
    * Puts a cookie in the store without saving to a file.
    * @param {Cookie} cookie - The cookie to add to the store.
    */
-  private _putCookieSyncInternal (cookie: Cookie) {
-    let domainVal = this.idx[cookie.domain]
+  private _putCookieSyncInternal (cookie: Cookie): boolean {
+    const { domain, path, key } = cookie
+    // Guarding against invalid input
+    // istanbul ignore next
+    if (domain == null || path == null || key == null) {
+      return false
+    }
+    let domainVal = this.idx[domain]
     if (!domainVal) {
       domainVal = {}
-      this.idx[cookie.domain] = domainVal
+      this.idx[domain] = domainVal
     }
-    let pathVal = domainVal[cookie.path]
+    let pathVal = domainVal[path]
     if (!pathVal) {
       pathVal = {}
-      domainVal[cookie.path] = pathVal
+      domainVal[path] = pathVal
     }
-    pathVal[cookie.key] = cookie
+    pathVal[key] = cookie
+    return true
   }
 
   /**
@@ -432,8 +448,9 @@ export default class FileCookieStore extends Store {
    * @param {Cookie} cookie - The cookie to add to the store.
    */
   private _putCookieSync (cookie: Cookie) {
-    this._putCookieSyncInternal(cookie)
-    this._saveSync()
+    if (this._putCookieSyncInternal(cookie)) {
+      this._saveSync()
+    }
   }
 
   /** @inheritdoc */
@@ -443,7 +460,11 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   updateCookie (oldCookie: Cookie, newCookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     // TODO delete old cookie?
-    return this.putCookie(newCookie, cb)
+    if(cb) {
+      return this.putCookie(newCookie, cb)
+    } else {
+      return this.putCookie(newCookie)
+    }
   }
 
   /** @inheritdoc */
@@ -554,7 +575,7 @@ export default class FileCookieStore extends Store {
    * @param {Function} cb - The callback to be called when finished.
    * @returns {Promise} a promise if no callback was passed.
    */
-  private _removeCookiesAsync (domain: string, path: string, cb?: ErrorCallback): (void | Promise<void>) {
+  private _removeCookiesAsync (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
     return this._doSyncWriteAsAsync(() => {
       return this._removeCookiesSyncInternal(domain, path)
     }, cb)
@@ -566,8 +587,8 @@ export default class FileCookieStore extends Store {
    * @param {string} path - The path of the cookies to remove.
    * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
-  private _removeCookiesSyncInternal (domain: string, path: string): boolean {
-    if (path) {
+  private _removeCookiesSyncInternal (domain: string, path: Nullable<string>): boolean {
+    if (path != null) {
       const domainVal = this.idx[domain]
       if (domainVal) {
         const deleted = (delete domainVal[path])
@@ -589,7 +610,7 @@ export default class FileCookieStore extends Store {
    * @param {string} domain - The domain of the cookies to remove.
    * @param {string} path - The path of the cookies to remove.
    */
-  private _removeCookiesSync (domain: string, path: string) {
+  private _removeCookiesSync (domain: string, path: Nullable<string>) {
     if (this._removeCookiesSyncInternal(domain, path)) {
       this._saveSync()
     }
@@ -754,12 +775,23 @@ export default class FileCookieStore extends Store {
    * @param {string} filePath - The path of the file that the string data was loaded from.
    * @returns {CookiesData} the parsed data
    */
-  private _loadFromStringSync (data: string | null, filePath: string): CookiesData {
-    let dataJson = null
+  private _loadFromStringSync (data: string, filePath: string): (CookiesData | undefined) {
+    if(!data) {
+      // file is empty, so nothing to load
+      return undefined
+    }
+
+    // de-serialize json
+    let dataJson: (CookiesData | null) = null
     try {
       dataJson = JSON.parse(data)
     } catch {
       throw new Error(`Could not parse cookie file ${filePath}. Please ensure it is not corrupted.`)
+    }
+    
+    // ensure object is a json object
+    if(!dataJson || (typeof dataJson) !== 'object' || dataJson instanceof Array) {
+      throw new Error(`Cookies file is invalid`)
     }
 
     // create Cookie instances of all entries
@@ -769,7 +801,14 @@ export default class FileCookieStore extends Store {
         const pVal = dVal[p]
         for (const k of Object.keys(pVal)) {
           // since Cookie is a class, we need to create an instance of it
-          pVal[k] = Cookie.fromJSON(JSON.stringify(pVal[k]))
+          const valJson = JSON.stringify(pVal[k])
+          const cookie = Cookie.fromJSON(valJson)
+          // istanbul ignore else
+          if(cookie) {
+            pVal[k] = cookie
+          } else if(valJson) {
+            console.warn(`Failed to parse cookie object ${valJson}`)
+          }
         }
       }
     }

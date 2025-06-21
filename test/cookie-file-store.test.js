@@ -145,6 +145,10 @@ function resolverForCount (count, done) {
  */
 function fileCookieStoreTests () {
   describe('#constructor', function () {
+    afterAll(function () {
+      fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
+    })
+
     it('FileCookieStore should be instance of Store class', function (done) {
       expect(cookieStore).to.be.instanceof(Store)
       done()
@@ -207,7 +211,7 @@ function fileCookieStoreTests () {
       }
     })
 
-    it('Loading a non-existant file should not throw an error', function (done) {
+    it('Should not throw when loading a non-existant file', function (done) {
       const nonexistantCookiesFile = path.join(__dirname, 'nonexistant-cookies-file.json')
       if (cookieStoreOptions?.loadAsync) {
         let detached = false
@@ -238,6 +242,62 @@ function fileCookieStoreTests () {
           done(error)
           return
         }
+        done()
+      }
+    })
+
+    it('Should not throw when loading an empty file', function (done) {
+      fs.writeFileSync(cookiesFileEmpty, '', { encoding: 'utf8', flag: 'w' })
+      if (cookieStoreOptions?.loadAsync) {
+        let detached = false
+        cookieStore = new FileCookieStore(cookiesFileEmpty, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            try {
+              expect(detached).to.eq(true)
+              expect(Object.keys(cookieStore.idx).length).to.eq(0)
+              cookieStoreOptions?.onLoad?.()
+            } catch (error) {
+              done(error)
+              return
+            }
+            done()
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            cookieStoreOptions?.onLoadError?.(error)
+            done(error)
+          })
+        })
+        detached = true
+      } else {
+        try {
+          cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+          expect(Object.keys(cookieStore.idx).length).to.eq(0)
+        } catch (error) {
+          done(error)
+          return
+        }
+        done()
+      }
+    })
+
+    it('Should throw when json file holds an array', function (done) {
+      fs.writeFileSync(cookiesFileEmpty, '[]', { encoding: 'utf8', flag: 'w' })
+      if (cookieStoreOptions?.loadAsync) {
+        ;(() => new FileCookieStore(cookiesFileEmpty, {
+          ...cookieStoreOptions,
+          onLoad: callbackFunc(done, () => {
+            cookieStoreOptions?.onLoad?.()
+            done(new Error("Load didn't fail"))
+          }),
+          onLoadError: callbackFunc(done, (error) => {
+            expect(error).to.be.instanceof(Error)
+            cookieStoreOptions?.onLoadError?.(error)
+            done()
+          })
+        }))()
+      } else {
+        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /invalid/)
         done()
       }
     })
@@ -290,7 +350,7 @@ function fileCookieStoreTests () {
     it('Should not find a cookie with the given domain, path and key (exmaple.com, /, c)', function (done) {
       findCookie('example.com', '/', 'c', callbackFunc(done, (error, cookie) => {
         expect(error).to.eq(null)
-        expect(cookie).to.eq(null)
+        expect(cookie).to.eq(undefined)
         done()
       }))
     })
