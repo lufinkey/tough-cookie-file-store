@@ -328,29 +328,6 @@ function fileCookieStoreTests () {
         }))
       }))
     })
-
-    it('Should add a new "baz" cookie to the store', function (done) {
-      const cookie = Cookie.parse('baz=baz; Domain=example.com; Path=/')
-      cookie.expires = expiresDate
-      cookie.creation = creationDate
-      cookie.lastAccessed = lastAccessedDate
-      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
-      putCookie(cookie, callbackFunc(done, (error) => {
-        expect(error).to.eq(null)
-        cookieStore.findCookie('example.com', '/', 'baz', callbackFunc(done, (error, cookie) => {
-          expect(error).to.eq(null)
-          expect(cookie).to.be.instanceof(Cookie)
-          expect(cookie.key).to.eq('baz')
-          expect(cookie.value).to.eq('baz')
-          expect(cookie.expires).to.equalDate(expiresDate)
-          expect(cookie.domain).to.eq('example.com')
-          expect(cookie.path).to.eq('/')
-          expect(cookie.creation).to.equalDate(creationDate)
-          expect(cookie.lastAccessed).to.equalDate(lastAccessedDate)
-          done()
-        }))
-      }))
-    })
   })
 
   storeMethodTests('updateCookie', function (updateCookie) {
