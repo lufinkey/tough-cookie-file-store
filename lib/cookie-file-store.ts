@@ -792,7 +792,7 @@ export default class FileCookieStore extends Store {
 
     // ensure object is a json object
     if (!dataJson || (typeof dataJson) !== 'object' || dataJson instanceof Array) {
-      throw new Error('Cookies file is invalid')
+      throw new Error('Invalid cookies file')
     }
 
     // create Cookie instances of all entries

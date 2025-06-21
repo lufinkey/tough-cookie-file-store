@@ -297,7 +297,7 @@ function fileCookieStoreTests () {
           })
         }))()
       } else {
-        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /invalid/)
+        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /[Ii]nvalid/)
         done()
       }
     })
@@ -318,7 +318,7 @@ function fileCookieStoreTests () {
           })
         }))()
       } else {
-        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /invalid/)
+        ;(() => new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)).should.throw(Error, /[Ii]nvalid/)
         done()
       }
     })
