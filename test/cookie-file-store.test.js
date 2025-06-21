@@ -495,10 +495,10 @@ function fileCookieStoreTests () {
 }
 
 /**
- *
+ * Defines all the tests for the async version of the cookie store
  */
 function fileCookieStoreAsyncTests () {
-  describe('_saveAsync', function () {
+  describe('#_saveAsync', function () {
     it('Multiple sequential calls to mutating methods should only cause a single write', function (done) {
       let saveCount = 0
       const resolveOne = resolverForCount(2, () => {
