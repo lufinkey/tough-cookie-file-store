@@ -164,7 +164,7 @@ function fileCookieStoreTests () {
       done()
     })
 
-    it('Should throw an error when file can not be parsed', function (done) {
+    it('Should throw an error when file cannot be parsed', function (done) {
       if (cookieStoreOptions?.loadAsync) {
         ;(() => new FileCookieStore(cookiesFileParseError, {
           ...cookieStoreOptions,
