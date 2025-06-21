@@ -51,11 +51,9 @@ export default class FileCookieStore extends Store {
     this.synchronous = !options?.async
     this.filePath = filePath
     this.idx = {}
-    // istanbul ignore else
     if (util.inspect.custom) {
       this[util.inspect.custom] = this._inspect
     }
-    // istanbul ignore else
     if (!filePath) {
       throw new Error('Unknown file for read/write cookies')
     }
@@ -558,7 +556,6 @@ export default class FileCookieStore extends Store {
    * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
   private _removeCookiesSyncInternal (domain: string, path: string): boolean {
-    // istanbul ignore else
     if (path) {
       const domainVal = this.idx[domain]
       if (domainVal) {
@@ -730,7 +727,6 @@ export default class FileCookieStore extends Store {
    */
   private _loadFromFileSync (filePath: string): CookiesData {
     let data: string | null = null
-    // istanbul ignore else
     if (fs.existsSync(this.filePath)) {
       data = fs.readFileSync(filePath, 'utf8')
     }
@@ -744,7 +740,6 @@ export default class FileCookieStore extends Store {
    * @returns {CookiesData} the parsed data
    */
   private _loadFromStringSync (data: string | null, filePath: string): CookiesData {
-    // istanbul ignore else
     let dataJson = null
     try {
       dataJson = JSON.parse(data)
