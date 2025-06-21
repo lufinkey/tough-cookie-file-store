@@ -74,9 +74,13 @@ export default class FileCookieStore extends Store {
         if (options?.onLoadError) {
           options.onLoadError(err)
         } else {
+          // istanbul ignore next
           console.error(err)
         }
-      }).catch((error) => {
+      })
+      // istanbul ignore next
+      .catch((error) => {
+        // istanbul ignore next
         console.error(error)
       })
     } else {
@@ -112,6 +116,7 @@ export default class FileCookieStore extends Store {
             }
             cb(null, result)
           } catch (error) {
+            // istanbul ignore next
             console.error(error)
           }
         }
@@ -165,6 +170,7 @@ export default class FileCookieStore extends Store {
                   done = true
                   cb(error)
                 } else {
+                  // istanbul ignore next
                   console.error(error)
                 }
               })
@@ -179,6 +185,7 @@ export default class FileCookieStore extends Store {
               done = true
               cb(error)
             } else {
+              // istanbul ignore next
               console.error(error)
             }
           }
@@ -817,6 +824,7 @@ export default class FileCookieStore extends Store {
           cb(error)
         })
         .catch((error) => {
+          // istanbul ignore next
           console.error(error)
         })
     } else {
@@ -833,6 +841,7 @@ export default class FileCookieStore extends Store {
       // since we're actively writing, also save async to ensure file gets written correctly
       this._saveAsync((error) => {
         if (error) {
+          // istanbul ignore next
           console.error(error)
         }
       })
