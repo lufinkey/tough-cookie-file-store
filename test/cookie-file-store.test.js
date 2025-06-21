@@ -118,15 +118,23 @@ function callbackFunc (done, func) {
  */
 function resolverForCount (count, done) {
   let called = false
+  let caughtError = undefined
   let callCount = 0
-  return () => {
+  return (error) => {
+    if(error && !caughtError) {
+      caughtError = error
+    }
     callCount++
     if (callCount >= count) {
       if (called) {
         console.error(`Called resolver more than expected (${callCount} instead of ${count})`)
       } else {
         called = true
-        done()
+        if(caughtError) {
+          done(caughtError)
+        } else {
+          done()
+        }
       }
     }
   }
@@ -553,7 +561,7 @@ function fileCookieStoreTests () {
  */
 function fileCookieStoreAsyncTests () {
   describe('#_saveAsync', function () {
-    it('Multiple sequential calls to mutating methods should only cause a single write', function (done) {
+    it('Multiple calls to mutating methods within tick should only cause a single write', function (done) {
       let saveCount = 0
       const resolveOne = resolverForCount(2, () => {
         try {
@@ -578,6 +586,48 @@ function fileCookieStoreAsyncTests () {
       cookieStore.removeAllCookies(callbackFunc(resolveOne, (error) => {
         expect(error).to.eq(null)
         resolveOne()
+      }))
+    })
+
+    it('Multiple sequential calls to mutating methods across ticks should cause an equal number of writes', function (done) {
+      let saveCount = 0
+      const resolveOne = resolverForCount(2, () => {
+        try {
+          expect(saveCount).to.eq(2)
+        } catch (error) {
+          done(error)
+          return
+        }
+        done()
+      })
+      cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
+      // read cookies to make sure that read promise is done
+      cookieStore.getAllCookies(callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
+        // count number of times the file is saved
+        const innerSaveToFileAsync = cookieStore._saveToFileAsync
+        cookieStore._saveToFileAsync = function (...args) {
+          saveCount += 1
+          return innerSaveToFileAsync.call(this, ...args)
+        }
+        // add a cookie to the store
+        const buzCookie = Cookie.parse('buz=buz; Domain=example.com; Path=/buz')
+        cookieStore.putCookie(buzCookie, callbackFunc(resolveOne, (error) => {
+          expect(error).to.eq(null)
+          resolveOne()
+        }))
+        // delay and remove the cookies from the store
+        ;(async () => {
+          try {
+            await Promise.resolve()
+            cookieStore.removeAllCookies(callbackFunc(resolveOne, (error) => {
+              expect(error).to.eq(null)
+              resolveOne()
+            }))
+          } catch(error) {
+            resolveOne(error)
+          }
+        })()
       }))
     })
   })
