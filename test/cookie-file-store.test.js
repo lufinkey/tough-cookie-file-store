@@ -440,13 +440,14 @@ function fileCookieStoreTests () {
 
   storeMethodTests('removeCookies', function (removeCookies) {
     it('Removing the only cookie should cause idx to be empty', function (done) {
-      const resolveOne = resolverForCount(2, done)
       const fooCookie = Cookie.parse('foo=foo; Domain=example.com; Path=/')
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
-      cookieStore.putCookie(fooCookie, resolveOne)
-      removeCookies('example.com', '/', callbackFunc(resolveOne, () => {
-        expect(Object.keys(cookieStore.idx).length).to.eq(0)
-        resolveOne()
+      cookieStore.putCookie(fooCookie, callbackFunc(done, (error) => {
+        expect(error).to.eq(null)
+        removeCookies('example.com', '/', callbackFunc(done, () => {
+          expect(Object.keys(cookieStore.idx).length).to.eq(0)
+          done()
+        }))
       }))
     })
 
