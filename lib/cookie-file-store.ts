@@ -832,6 +832,7 @@ export default class FileCookieStore extends Store {
     if (this._writePromise) {
       // since we're actively writing, also save async to ensure file gets written correctly
       this._saveAsync((error) => {
+        // istanbul ignore next
         if (error) {
           // istanbul ignore next
           console.error(error)
