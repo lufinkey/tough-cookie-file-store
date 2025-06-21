@@ -168,13 +168,18 @@ function fileCookieStoreTests () {
       if (cookieStoreOptions?.loadAsync) {
         ;(() => new FileCookieStore(cookiesFileParseError, {
           ...cookieStoreOptions,
-          onLoad: callbackFunc(done, () => {
+          onLoad: callbackFunc(done, (exists) => {
             cookieStoreOptions?.onLoad?.()
             done(new Error("Load didn't fail"))
           }),
           onLoadError: callbackFunc(done, (error) => {
-            expect(error).to.be.instanceof(Error)
-            cookieStoreOptions?.onLoadError?.(error)
+            try {
+              expect(error).to.be.instanceof(Error)
+              cookieStoreOptions?.onLoadError?.(error)
+            } catch (error) {
+              done(error)
+              return
+            }
             done()
           })
         }))()
@@ -189,9 +194,10 @@ function fileCookieStoreTests () {
         let detached = false
         ;(() => new FileCookieStore(cookiesFileEmpty, {
           ...cookieStoreOptions,
-          onLoad: callbackFunc(done, () => {
+          onLoad: callbackFunc(done, (exists) => {
             try {
               expect(detached).to.eq(true)
+              expect(exists).to.eq(true)
               cookieStoreOptions?.onLoad?.()
             } catch (error) {
               done(error)
@@ -217,9 +223,10 @@ function fileCookieStoreTests () {
         let detached = false
         cookieStore = new FileCookieStore(nonexistantCookiesFile, {
           ...cookieStoreOptions,
-          onLoad: callbackFunc(done, () => {
+          onLoad: callbackFunc(done, (exists) => {
             try {
               expect(detached).to.eq(true)
+              expect(exists).to.eq(false)
               expect(Object.keys(cookieStore.idx).length).to.eq(0)
               cookieStoreOptions?.onLoad?.()
             } catch (error) {
@@ -252,9 +259,10 @@ function fileCookieStoreTests () {
         let detached = false
         cookieStore = new FileCookieStore(cookiesFileEmpty, {
           ...cookieStoreOptions,
-          onLoad: callbackFunc(done, () => {
+          onLoad: callbackFunc(done, (exists) => {
             try {
               expect(detached).to.eq(true)
+              expect(exists).to.eq(true)
               expect(Object.keys(cookieStore.idx).length).to.eq(0)
               cookieStoreOptions?.onLoad?.()
             } catch (error) {
@@ -291,8 +299,13 @@ function fileCookieStoreTests () {
             done(new Error("Load didn't fail"))
           }),
           onLoadError: callbackFunc(done, (error) => {
-            expect(error).to.be.instanceof(Error)
-            cookieStoreOptions?.onLoadError?.(error)
+            try {
+              expect(error).to.be.instanceof(Error)
+              cookieStoreOptions?.onLoadError?.(error)
+            } catch (error) {
+              done(error)
+              return
+            }
             done()
           })
         }))()
@@ -312,8 +325,13 @@ function fileCookieStoreTests () {
             done(new Error("Load didn't fail"))
           }),
           onLoadError: callbackFunc(done, (error) => {
-            expect(error).to.be.instanceof(Error)
-            cookieStoreOptions?.onLoadError?.(error)
+            try {
+              expect(error).to.be.instanceof(Error)
+              cookieStoreOptions?.onLoadError?.(error)
+            } catch (error) {
+              done(error)
+              return
+            }
             done()
           })
         }))()

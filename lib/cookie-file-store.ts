@@ -776,10 +776,10 @@ export default class FileCookieStore extends Store {
    * @param {string} filePath - The path of the file that the string data was loaded from.
    * @returns {CookiesData} the parsed data
    */
-  private _loadFromStringSync (data: string, filePath: string): (CookiesData | undefined) {
+  private _loadFromStringSync (data: string, filePath: string): CookiesData {
     if (!data) {
       // file is empty, so nothing to load
-      return undefined
+      return {}
     }
 
     // de-serialize json
