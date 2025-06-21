@@ -793,8 +793,19 @@ function fileCookieStoreAsyncTests () {
 
 // Define the tests for each variant of the cookie store
 describe('Test cookie-file-store', function () {
+  // Test synchronous methods without options
+  describe('options: undefined', function () {
+    beforeEach(function () {
+      cookieStoreOptions = undefined
+      cookieStore = new FileCookieStore(cookiesFile, cookieStoreOptions)
+      expect(cookieStore.synchronous).to.eq(true)
+    })
+
+    fileCookieStoreTests()
+  })
+
   // Test synchronous methods
-  describe('async = false', function () {
+  describe('options: {async: false}', function () {
     beforeEach(function () {
       cookieStoreOptions = {
         async: false
@@ -807,7 +818,7 @@ describe('Test cookie-file-store', function () {
   })
 
   // Test asynchronous methods on a store loaded synchronously
-  describe('async = true, loadAsync = false', function () {
+  describe('options: {async: true, loadAsync: false}', function () {
     beforeEach(function () {
       cookieStoreOptions = {
         async: true,
@@ -822,7 +833,7 @@ describe('Test cookie-file-store', function () {
   })
 
   // Test asynchronous methods on a store loaded asynchronously
-  describe('async = true, loadAsync = true', function () {
+  describe('options: {async: true, loadAsync: true}', function () {
     beforeEach(function () {
       cookieStoreOptions = {
         async: true,
