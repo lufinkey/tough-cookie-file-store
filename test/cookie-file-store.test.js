@@ -494,6 +494,9 @@ function fileCookieStoreTests () {
   })
 }
 
+/**
+ *
+ */
 function fileCookieStoreAsyncTests () {
   describe('_saveAsync', function () {
     it('Multiple sequential calls to mutating methods should only cause a single write', function (done) {
@@ -501,7 +504,7 @@ function fileCookieStoreAsyncTests () {
       const resolveOne = resolverForCount(2, () => {
         try {
           expect(saveCount).to.eq(1)
-        } catch(error) {
+        } catch (error) {
           done(error)
           return
         }

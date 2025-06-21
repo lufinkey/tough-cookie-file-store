@@ -45,7 +45,7 @@ export default class FileCookieStore extends Store {
    */
   constructor (
     filePath: string,
-    options?: FileCookieStoreOptions,
+    options?: FileCookieStoreOptions
   ) {
     super()
     this.synchronous = !options?.async
@@ -68,7 +68,7 @@ export default class FileCookieStore extends Store {
         if (dataJson) {
           this.idx = dataJson
         }
-        if(options?.onLoad) {
+        if (options?.onLoad) {
           options.onLoad()
         }
       }, err => {
@@ -493,9 +493,9 @@ export default class FileCookieStore extends Store {
     }
     const deleted = (delete pathVal[key])
     // clean up entries if empty
-    if (deleted && Object.keys(pathVal).length == 0) {
+    if (deleted && Object.keys(pathVal).length === 0) {
       delete domainVal[path]
-      if (Object.keys(domainVal).length == 0) {
+      if (Object.keys(domainVal).length === 0) {
         delete this.idx[domain]
       }
     }
@@ -564,7 +564,7 @@ export default class FileCookieStore extends Store {
       if (domainVal) {
         const deleted = (delete domainVal[path])
         // clean up entries if empty
-        if (deleted && Object.keys(domainVal).length == 0) {
+        if (deleted && Object.keys(domainVal).length === 0) {
           delete this.idx[domain]
         }
         return deleted
@@ -626,7 +626,7 @@ export default class FileCookieStore extends Store {
    * @returns {boolean} true if any cookies were removed, or false if no change occured
    */
   private _removeAllCookiesSyncInternal (): boolean {
-    if (Object.keys(this.idx).length == 0) {
+    if (Object.keys(this.idx).length === 0) {
       return false
     }
     this.idx = {}
@@ -799,7 +799,7 @@ export default class FileCookieStore extends Store {
           }
         } else {
           // delay atleast 1 tick, in case of multiple writes
-          await Promise.resolve();
+          await Promise.resolve()
         }
         // this is now the active write, so update the write promises
         this._writePromise = this._nextWritePromise
