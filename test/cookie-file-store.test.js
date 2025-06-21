@@ -141,7 +141,7 @@ function resolverForCount (count, done) {
 }
 
 /**
- * Defines all the tests for a cookie store
+ * Defines the common tests for a cookie store
  */
 function fileCookieStoreTests () {
   describe('#constructor', function () {
@@ -557,7 +557,7 @@ function fileCookieStoreTests () {
 }
 
 /**
- * Defines all the tests for the async version of the cookie store
+ * Defines the tests for the async version of the cookie store
  */
 function fileCookieStoreAsyncTests () {
   describe('#_saveAsync', function () {
