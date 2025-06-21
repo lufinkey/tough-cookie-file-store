@@ -101,7 +101,7 @@ export default class FileCookieStore extends Store {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
-      if (cb) {
+      if (typeof cb === 'function') {
         // handle with callback
         const continueFunc = () => {
           try {
@@ -125,7 +125,7 @@ export default class FileCookieStore extends Store {
       }
     } else {
       // do action immediately
-      if (cb) {
+      if (typeof cb === 'function') {
         let result
         try {
           result = action()
@@ -153,7 +153,7 @@ export default class FileCookieStore extends Store {
     if (this._readPromise) {
       // wait for read promise to finish
       const promise = this._readPromise
-      if (cb) {
+      if (typeof cb === 'function') {
         // handle with callback
         const continueFunc = () => {
           let done = false
@@ -201,7 +201,7 @@ export default class FileCookieStore extends Store {
       try {
         changed = action()
       } catch (error) {
-        if (cb) {
+        if (typeof cb === 'function') {
           cb(error)
           return
         } else {
@@ -211,7 +211,7 @@ export default class FileCookieStore extends Store {
       if (changed) {
         return this._save(cb)
       } else {
-        if (cb) {
+        if (typeof cb === 'function') {
           cb(null)
         } else {
           return Promise.resolve()
@@ -227,7 +227,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   findCookie (domain: Nullable<string>, path: Nullable<string>, key: Nullable<string>, cb?: Callback<Cookie | undefined>): (void | Promise<Cookie | null | undefined>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         let cookie
         try {
           cookie = this._findCookieSync(domain, path, key)
@@ -283,7 +283,7 @@ export default class FileCookieStore extends Store {
       allowSpecialUseDomain = false
     }
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         let cookies
         try {
           cookies = this._findCookiesSync(domain, path, allowSpecialUseDomain)
@@ -370,7 +370,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   putCookie (cookie: Cookie, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         try {
           this._putCookieSync(cookie)
         } catch (error) {
@@ -444,7 +444,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   removeCookie (domain: string, path: string, key: string, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         try {
           this._removeCookieSync(domain, path, key)
         } catch (error) {
@@ -521,7 +521,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   removeCookies (domain: string, path: Nullable<string>, cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         try {
           this._removeCookiesSync(domain, path)
         } catch (error) {
@@ -594,7 +594,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   removeAllCookies (cb?: ErrorCallback): (void | Promise<void>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         try {
           this._removeAllCookiesSync()
         } catch (error) {
@@ -649,7 +649,7 @@ export default class FileCookieStore extends Store {
   /** @inheritdoc */
   getAllCookies (cb?: Callback<Cookie[]>): (void | Promise<Cookie[]>) {
     if (this.synchronous) {
-      if (cb) {
+      if (typeof cb === 'function') {
         let cookies
         try {
           cookies = this._getAllCookiesSync()
@@ -814,7 +814,7 @@ export default class FileCookieStore extends Store {
       })()
     }
     // wait for next write promise
-    if (cb) {
+    if (typeof cb === 'function') {
       this._nextWritePromise
         .then(() => {
           cb(null)
@@ -853,7 +853,7 @@ export default class FileCookieStore extends Store {
    */
   private _saveToFileAsync (filePath: string, data: CookiesData, cb?: (error: Error) => void): (void | Promise<void>) {
     const dataString = JSON.stringify(data)
-    if (cb) {
+    if (typeof cb === 'function') {
       fs.writeFile(filePath, dataString, cb)
     } else {
       return fs.promises.writeFile(filePath, dataString)
