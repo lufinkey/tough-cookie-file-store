@@ -179,7 +179,6 @@ function fileCookieStoreTests () {
         done()
       }
     })
-
     
     it('Should load cookie file successfully', function (done) {
       if (cookieStoreOptions?.loadAsync) {
@@ -540,7 +539,7 @@ function fileCookieStoreTests () {
     afterAll(function () {
       fs.writeFileSync(cookiesFileEmpty, '{}', { encoding: 'utf8', flag: 'w' })
     })
-    
+
     it('Clearing an empty store shouldn\'t cause a file write', function (done) {
       let saveCount = 0
       cookieStore = new FileCookieStore(cookiesFileEmpty, cookieStoreOptions)
