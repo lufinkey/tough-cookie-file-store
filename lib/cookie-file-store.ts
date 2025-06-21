@@ -17,7 +17,7 @@ export type CookiesData = {
 export type FileCookieStoreOptions = {
   async?: boolean,
   loadAsync?: boolean,
-  onLoad?: () => void,
+  onLoad?: (exists: boolean) => void,
   onLoadError?: (err: Error) => void
 }
 
@@ -68,7 +68,7 @@ export default class FileCookieStore extends Store {
         }
         // istanbul ignore next
         if (options?.onLoad) {
-          options.onLoad()
+          options.onLoad(dataJson !== undefined)
         }
       }, err => {
         delete this._readPromise
@@ -724,11 +724,11 @@ export default class FileCookieStore extends Store {
    * @param {string} filePath - The file to load the store from.
    * @returns {Promise<CookiesData>} a promise that resolves with the parsed data from the file.
    */
-  private async _loadFromFileAsync (filePath: string): Promise<CookiesData> {
+  private async _loadFromFileAsync (filePath: string): Promise<CookiesData | undefined> {
     try {
       await fs.promises.access(filePath, fs.constants.F_OK)
     } catch {
-      return
+      return undefined
     }
     const data = await fs.promises.readFile(filePath, 'utf8')
     return this._loadFromStringSync(data, filePath)
