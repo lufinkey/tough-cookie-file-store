@@ -28,17 +28,8 @@
     "tough-cookie": "^5.0.0"
   },
   "type": "module",
-  "main": "dist/cookie-file-store.js",
-  "types": "dist/cookie-file-store.d.ts",
-  "engines": {
-    "node": ">=16"
-  },
-  "files": [
-    "dist/**/*.js",
-    "dist/**/*.js.map",
-    "dist/**/*.d.ts",
-    "CHANGELOG.md"
-  ],
+  "main": "dist/lib/cookie-file-store.js",
+  "types": "dist/lib/cookie-file-store.d.ts",
   "scripts": {
     "lint": "eslint lib test --color",
     "lint:fix": "eslint lib test --fix",

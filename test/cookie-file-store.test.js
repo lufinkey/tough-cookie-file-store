@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-import FileCookieStore, { DefaultFileFormat, FileFormat } from '../dist/cookie-file-store'
+import FileCookieStore, { DefaultFileFormat, FileFormat } from '../dist/lib/cookie-file-store'
 import { fileURLToPath } from 'url'
 import { Cookie, Store } from 'tough-cookie'
 import { expect, should } from 'chai'
